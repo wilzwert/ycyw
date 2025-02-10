@@ -1,11 +1,32 @@
-export const MESSAGE_TYPE = {
-    START: 'START',
-    HANDLE: 'HANDLE',
-    MESSAGE: 'MESSAGE',
-    TYPING: 'TYPING',
-    STOP_TYPING: 'STOP_TYPING',
-    QUIT: 'QUIT'
+// at first, the user has to choose a username
+export class MessageForm extends HTMLElement {
+    connectedCallback() {
+        this.innerHTML = `
+            <form class="message-form" method="post">
+                <input type="text" name="message" placeholder="Type your message">
+                <button type="submit">Send</button>
+            </form>
+        `;
+    }
 }
+
+customElements.define("message-form", MessageForm);
+
+export class LoginForm extends HTMLElement {
+    connectedCallback() {
+        this.innerHTML = `
+            <div  class="form">
+            <form id="loginForm" method="post">
+                <label for="username">Username</label>
+                <input name="username" type="text" placeholder="Type your username" />
+                <button type="submit">Login</button>
+            </form>
+            </div>
+        `;
+    }
+}
+
+customElements.define("login-form", LoginForm);
 
 export class Chat {
     // WS client
@@ -22,7 +43,6 @@ export class Chat {
     wrapper = null;
     messagesContainer = null;
     messageForm = null;
-    messageInput = null;
 
     constructor(client, sender, recipient, source, destination) {
         this.client = client;
@@ -35,45 +55,24 @@ export class Chat {
     }
 
     subscribe() {
+        console.log(`subscribe ${this.source}`);
         this.client.subscribe(this.source, this.receiveMessage.bind(this));
     }
 
-    displayTyping() {
-        this.typing.style.display = 'block';
-
-    }
-
-    hideTyping() {
-        this.typing.style.display = '';
-    }
-
-    userQuit() {
-        const messageElement = document.createElement('div');
-        messageElement.className = 'quit-message';
-        messageElement.innerHTML = 'User has left the chat.';
-        this.addMessage(messageElement);
-    }
-
     addReceivedMessage(messageContent) {
+        console.log('add received', messageContent);
         const messageElement = document.createElement('div');
         messageElement.className = 'received-message';
         messageElement.innerHTML = messageContent;
         this.addMessage(messageElement);
     }
 
-    receiveMessageObject(messageObject) {
-        if(messageObject.sender == this.recipient) {
-            switch(messageObject.type) {
-                case MESSAGE_TYPE.MESSAGE: this.addReceivedMessage(messageObject.content); break;
-                case MESSAGE_TYPE.TYPING: this.displayTyping(); break;
-                case MESSAGE_TYPE.STOP_TYPING: this.hideTyping(); break;
-                case MESSAGE_TYPE.QUIT: this.userQuit(); break;
-            }
-        }
-    }
-
     receiveMessage(message) {
-        this.receiveMessageObject(JSON.parse(message.body));
+        console.log('receive');
+        const messageObject = JSON.parse(message.body);
+        if(messageObject.sender == this.recipient) {
+            this.addReceivedMessage(JSON.parse(message.body).content);
+        }
     }
 
     addMessage(messageElement) {
@@ -90,89 +89,34 @@ export class Chat {
         this.addMessage(messageElement);
     }
 
-    sendMessage(messageType, content) {
+    sendMessage(message) {
+        console.log('sendMessage to '+this.destination);
         this.client.publish({
             destination: this.destination,
-            body: JSON.stringify({ sender: this.sender, recipient: this.recipient, type: messageType, content: content})
+            body: JSON.stringify({ sender: this.sender, recipient: this.recipient, content: message})
         });
-        if(messageType == MESSAGE_TYPE.MESSAGE) {
-            this.addSentMessage(content);
-        }
+        this.addSentMessage(message);
     }
 
     buildUi() {
         this.wrapper = document.createElement('div');
         this.wrapper.className = 'chat';
 
-        // build container for sent and received messages
         this.messagesContainer = document.createElement('div');
         this.messagesContainer.className = 'messages';
         this.wrapper.appendChild(this.messagesContainer);
 
-
-        // build message form
-        const messageFormContainer = document.createElement('div');
-        messageFormContainer.className = 'message-form';
-        const formHtml = `
-            <form method="post">
-                <input type="text" name="message" placeholder="Type your message">
-                <button type="submit">Send</button>
-            </form>`;
-        messageFormContainer.innerHTML = formHtml;
-        this.wrapper.appendChild(messageFormContainer);
-        this.messageForm = messageFormContainer.getElementsByTagName('form')[0];
-        this.messageInput = this.messageForm.elements['message'];
-
-        // add listeners for form events
-        let timeout = null;
-        let isTyping = false;
-        this.messageInput.addEventListener('keydown', (e) => {
-            if(!isTyping && e.keyCode != "Enter") {
-                isTyping = true;
-                timeout = setTimeout(() => {
-                    timeout = null;
-                    this.sendMessage(MESSAGE_TYPE.TYPING, '')
-                }, 500);
-            }
-        });
-
-        this.messageInput.addEventListener('blur', (e) => {
-           if(timeout) {
-               clearTimeout(timeout);
-           }
-           if(isTyping) {
-               isTyping = false;
-               timeout = setTimeout(() => {
-                   timeout = null;
-                   this.sendMessage(MESSAGE_TYPE.STOP_TYPING, '')
-               }, 500);
-           }
-        });
-
+        this.messageForm = document.createElement('message-form');
+        this.wrapper.appendChild(this.messageForm);
         this.messageForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            if(timeout) {
-                clearTimeout(timeout);
-                timeout = null;
-            }
-            isTyping = false;
-            this.sendMessage(MESSAGE_TYPE.STOP_TYPING, '');
-            this.sendMessage(MESSAGE_TYPE.MESSAGE, e.target.message.value);
+            console.log('sendmessage')
+            this.sendMessage(e.target.message.value)
             e.target.message.value = '';
-        });
-
-        window.addEventListener("beforeunload", (e) => {
-            this.sendMessage(MESSAGE_TYPE.QUIT, '');
-        });
-
-        // create container to display "User is typing..." when needed
-        this.typing = document.createElement('div');
-        this.typing.className = 'display-typing';
-        this.typing.innerHTML = 'User is typing...';
-        this.messagesContainer.appendChild(this.typing);
+        })
     }
 
-    get element() {
+    get element () {
         return this.wrapper;
     }
 }

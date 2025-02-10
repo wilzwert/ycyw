@@ -77,7 +77,6 @@ html {
     flex: 1 0 80%;
     overflow: auto;
     padding: 1em;
-    position: relative;
 }
 
 .message {
@@ -107,16 +106,12 @@ html {
     float: left;
 }
 
-.quit-message {
-    font-style: italic;
-}
-
-.message-form {
+message-form {
     flex: 0 0;
     padding: .5em 1em;
 }
 
-.message-form form {
+.message-form {
     display: flex;
 }
 
@@ -125,14 +120,4 @@ html {
 }
 .message-form button {
     flex: 0 0;
-}
-
-.display-typing  {
-    display: none;
-    position: absolute;
-    bottom: 0;
-    right: 1rem;
-    float: right;
-    font-style: italic;
-    font-size: 0.8rem;
 }

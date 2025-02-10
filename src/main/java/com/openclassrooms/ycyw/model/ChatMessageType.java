@@ -7,10 +7,5 @@ package com.openclassrooms.ycyw.model;
  * Time:16:50
  */
 public enum ChatMessageType {
-    START,
-    HANDLE,
-    TYPING,
-    STOP_TYPING,
-    MESSAGE,
-    QUIT
+    // TODO : typing, message, quit
 }

@@ -1,35 +1,19 @@
-import { MESSAGE_TYPE, Chat} from './components.js';
+import {LoginForm, MessageForm, Chat} from './components.js';
 import { Client } from '@stomp/stompjs';
 
 class UI {
-
     client = null;
-    socketSessionId = null;
 
     constructor() {
     }
 
     displayChat() {
-        const chat = new Chat(this.client, this.socketSessionId, "support", `/user/queue/messages-user${this.socketSessionId}`, '/app/private');
+        let url = this.client.webSocket._transport.url;
+        let sessionId = url.match(/\/ws\/[^/]+\/([^/]+)\/websocket/)[1];
+        console.log(sessionId);
+        const chat = new Chat(this.client, sessionId, "support", '/user/'+/*username+'/'+*/'queue/messages-user'+sessionId, '/app/support');
         this.wrapper.innerHTML = '';
         this.wrapper.appendChild(chat.element);
-    }
-
-    startChat() {
-        let url = this.client.webSocket._transport.url;
-        this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)\/websocket/)[1];
-        this.client.publish({
-            destination: '/app/support',
-            body: JSON.stringify({ sender: this.socketSessionId, recipient: 'support', type: MESSAGE_TYPE.START, content: ''})
-        });
-
-        this.client.subscribe(`/user/queue/messages-user${this.socketSessionId}`, (message) => {
-            let messageObject = JSON.parse(message);
-            if(messageObject.type == MESSAGE_TYPE.HANDLE) {
-                this.displayChat();
-            }
-        });
-        this.wrapper.innerHTML = "You should soon be connected to one of our agents";
     }
 
     connect() {
@@ -41,8 +25,7 @@ class UI {
                     return new SockJS("http://localhost:8080/ws");
                 },
                 onConnect: () => {
-                    // send start message
-                    this.startChat();
+                    this.displayChat();
                 }
             });
             this.client.activate();
