@@ -1,18 +1,13 @@
 package com.openclassrooms.ycyw.configuration;
 
 
-import org.springframework.context.annotation.Bean;
+import com.openclassrooms.ycyw.service.ChatService;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.messaging.simp.user.DefaultUserDestinationResolver;
-import org.springframework.messaging.simp.user.SimpUserRegistry;
-import org.springframework.messaging.simp.user.UserDestinationResolver;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
-import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
-import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
+import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
 
 /**
  * @author Wilhelm Zwertvaegher
@@ -25,6 +20,12 @@ import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer
 {
 
+    private final ChatService chatService;
+
+    public WebSocketConfiguration(ChatService chatService) {
+        this.chatService = chatService;
+    }
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/topic", "/user/queue/messages");
@@ -35,7 +36,8 @@ public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setHandshakeHandler(new CustomHandshakeHandler())
+                .setHandshakeHandler(new CustomHandshakeHandler(chatService))
+                .addInterceptors(new CustomHttpSessionHandshakeInterceptor())
                 .withSockJS();
     }
 }

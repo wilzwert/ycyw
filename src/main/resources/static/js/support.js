@@ -1,10 +1,62 @@
-import { Chat } from './components.js';
+import {MESSAGE_TYPE, Chat, ChatHistory} from './chat.js';
 import { Client } from '@stomp/stompjs';
+
+/**
+ * A user waiting for connection with a support agent
+ */
+class WaitingUser {
+    username = null;
+    callback = null;
+    htmlElement = null;
+
+    constructor(username, callback) {
+        this.username = username;
+        this.callback = callback;
+
+        this.htmlElement = document.createElement('div');
+        this.htmlElement.className = 'user';
+        this.htmlElement.innerHTML = `<span class="username">${username}</span>`;
+        this.htmlElement.addEventListener('click', e => {
+            e.preventDefault();
+            callback(username);
+        });
+    }
+
+    get element() {
+        return this.htmlElement;
+    }
+}
+
+/**
+ * A user connected with a support agent
+ */
+class ChatUser {
+
+    username = null;
+    callback = null;
+    htmlElement = null;
+
+    constructor(username, callback) {
+        this.username = username;
+        this.callback = callback;
+
+        this.htmlElement = document.createElement('div');
+        this.htmlElement.className = 'user';
+        this.htmlElement.innerHTML = `<span class="username">${username}</span><span class="messages-count"></span>`;
+        this.htmlElement.addEventListener('click', e => {e.preventDefault(); callback(username)});
+    }
+
+    get element() {
+        return this.htmlElement;
+    }
+}
 
 class SupportUI {
     client = null;
     chats = [];
-    usersContainer = null;
+    waitingUsers = [];
+    handledContainer = null;
+    waitingContainer = null;
     chatsContainer = null;
     currentChat = null;
     wrapper = null;
@@ -13,68 +65,179 @@ class SupportUI {
     constructor() {
     }
 
-    displayChat(userName) {
-        if(this.currentChat != userName) {
+    displayChat(username) {
+        if(this.currentChat !== username) {
             this.chatsContainer.innerHTML = '';
-            this.chatsContainer.appendChild(this.chats[userName].element);
-            this.currentChat = userName;
-            this.usersContainer.childNodes.forEach(userContainer => {
-                userContainer.className = 'user '+(userContainer.firstChild.innerHTML == userName ? ' active' : '')
-                // reset dyslayed new messages count
+            this.chatsContainer.appendChild(this.chats[username].element);
+            this.currentChat = username;
+            this.handledContainer.childNodes.forEach(userContainer => {
+                userContainer.className = 'user '+(userContainer.firstChild.innerHTML === username ? ' active' : '')
+                // reset displayed new messages count
                 userContainer.childNodes[1].innerHTML = '';
             });
         }
     }
 
-    createChat(messageObject) {
-        this.chats[messageObject.sender] = new Chat(this.client, "support", messageObject.sender,"/topic/support", "/app/private");
-        this.chats[messageObject.sender].addReceivedMessage(messageObject.content);
-        const userElement = document.createElement('div');
-        userElement.className = 'user';
-        userElement.innerHTML = `<span class="username">${messageObject.sender}</span><span class="messages-count"></span>`;
-        userElement.addEventListener('click', e => {e.preventDefault(); this.displayChat(messageObject.sender);});
-        this.usersContainer.appendChild(userElement);
-        this.displayChat(messageObject.sender);
+    createChat(username, chatHistoryEntry = null) {
+        const url = this.client.webSocket._transport.url;
+        this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)(\/websocket)?/)[1];
+        this.chats[username] = new Chat(this.client, username,`/user/queue/messages/${username}-user${this.socketSessionId}`, "/app/private");
+        if(chatHistoryEntry) {
+            this.chats[username].restoreFromHistory(chatHistoryEntry);
+        }
+
+        const user = new ChatUser(username, this.displayChat.bind(this));
+        this.handledContainer.appendChild(user.element);
+        this.displayChat(username);
+
+        this.client.subscribe(`/user/queue/messages/${username}-user${this.socketSessionId}`, this.handleUserMessage.bind(this))
     }
 
+    // support user wants to handle chat with username
+    handleUser(username) {
+        // broadcast the handle message
+        this.client.publish({
+            destination: '/app/support',
+            body: JSON.stringify({
+                sender: this.socketSessionId,
+                recipient: username,
+                type: MESSAGE_TYPE.HANDLE,
+                content: username
+            })
+        });
+        // display chat for the user
+        this.createChat(username);
+    }
+
+    // display new waiting user
+    addWaitingUser(username) {
+        if (typeof this.chats[username] == "undefined" && typeof this.waitingUsers[username] == "undefined") {
+            this.waitingUsers[username] = new WaitingUser(username, this.handleUser.bind(this));
+            this.waitingContainer.appendChild(this.waitingUsers[username].element);
+        }
+    }
+
+    // remove user from waiting users list
+    removeWaitingUser(username) {
+        if(typeof this.waitingUsers[username] != "undefined") {
+            let elmt = this.waitingUsers[username].element;
+            elmt.parentNode.removeChild(elmt);
+            delete this.waitingUsers[username];
+        }
+    }
+
+    // handle message broadcast on /topic/support
     handleMessage(message) {
         const messageObject = JSON.parse(message.body);
-        console.log("Message d'un utilisateur:", messageObject.sender);
-        if(typeof this.chats[messageObject.sender] == "undefined") {
-            this.createChat(messageObject);
+
+        switch(messageObject.type) {
+            // new user has arrived and waits to be handled by someone from support
+            case MESSAGE_TYPE.START :
+                    this.addWaitingUser(messageObject.sender)
+                break;
+            // a user has quit before they have been handled by someone from support
+            case MESSAGE_TYPE.QUIT :
+                this.removeWaitingUser(messageObject.sender)
+                break;
+            // a waiting user is handled by a support agent
+            case MESSAGE_TYPE.HANDLE :
+                // FIXME : it does not really make sense to consider that the user is the recipient
+                this.removeWaitingUser(messageObject.recipient);
+                break;
+            default: break;
         }
-        else if(messageObject.sender != this.currentChat) {
-            let user = this.usersContainer.childNodes.values().find(u => u.firstChild.innerHTML == messageObject.sender);
-            let count = user.childNodes[1].innerHTML == '' ? 0 : parseInt(user.childNodes[1].innerHTML);
+    }
+
+    // handle a message received and update unread messages if needed
+    handleUserMessage(message) {
+        const messageObject = JSON.parse(message.body);
+
+        if(messageObject.type === MESSAGE_TYPE.MESSAGE && messageObject.sender !== this.currentChat) {
+            let user = this.handledContainer.childNodes.values().find(u => u.firstChild.innerHTML === messageObject.sender);
+            let count = user.childNodes[1].innerHTML === '' ? 0 : parseInt(user.childNodes[1].innerHTML);
             count++;
             user.childNodes[1].innerHTML = count;
         }
     }
 
-    // at first, the user has to choose a username
+    // Restore previous interrupted chat(s) if possible
+    // 1. from localstorage
+    // 2. TODO from backend with fetch
+    async restoreFromHistory() {
+        let chatHistoryEntries = ChatHistory.get().entries;
+        if(!chatHistoryEntries) {
+            // TODO load chat history from backend
+        }
+
+        // from the user point of view, there is one and only one chat with a support agent
+        if(chatHistoryEntries == null || !Array.isArray(chatHistoryEntries)) {
+            return false;
+        }
+
+        chatHistoryEntries.forEach(chatHistoryEntry => {
+            this.createChat(chatHistoryEntry.user, chatHistoryEntry);
+        });
+    }
+
+    // restore waiting users list from API call result
+    restoreWaitingUsers() {
+        fetch("/api/chat/users?filter=waiting").then(r => r.json().then(json => {
+           if(Array.isArray(json)) {
+               json.forEach(u => this.addWaitingUser(u));
+           }
+        }));
+    }
+
+    // create user interface html elements and add them to the wrapper
+    createUi() {
+        // create containers for chats, waiting users and currently handled users
+        this.wrapper = document.getElementById('chatWrapper');
+        this.wrapper.innerHTML = '';
+
+        this.waitingContainer = document.createElement('div');
+        this.waitingContainer.className = 'waiting-users';
+
+        this.handledContainer = document.createElement('div');
+        this.handledContainer.className = 'handled-users';
+        const usersContainer = document.createElement('div');
+        usersContainer.className = 'users';
+        usersContainer.appendChild(this.handledContainer);
+        usersContainer.appendChild(this.waitingContainer);
+        this.wrapper.appendChild(usersContainer);
+
+        this.chatsContainer = document.createElement('div');
+        this.chatsContainer.className = 'chats';
+        this.wrapper.appendChild(this.chatsContainer);
+    }
+
     start() {
         try {
             this.client = new Client({
-                connectHeaders: {
-                    username: "support"
-                },
                 debug: console.log,
                 // Typical usage with SockJS
                 webSocketFactory: function () {
                     return new SockJS("http://localhost:8080/ws");
                 },
                 onConnect: () => {
-                    this.wrapper = document.getElementById('chatWrapper');
-                    this.wrapper.innerHTML = '';
-                    this.usersContainer = document.createElement('div');
-                    this.usersContainer.className = 'users';
-                    this.wrapper.appendChild(this.usersContainer);
+                    this.createUi();
 
-                    this.chatsContainer = document.createElement('div');
-                    this.chatsContainer.className = 'chats';
-                    this.wrapper.appendChild(this.chatsContainer);
-
+                    // subscribe to messages sent to the support topic
                     this.client.subscribe('/topic/support', this.handleMessage.bind(this));
+
+                    // restore chats and waiting users if available
+                    try {
+                        this.restoreFromHistory();
+                        this.restoreWaitingUsers();
+                    }
+                    catch(e) {}
+                },
+                onWebSocketClose: () => {
+                    // if the broker closed the connection, there's a good chance something terrible happened
+                    // and the system probably won't be able to reconnect users as we don't persist anything for this POC
+                    // in that specific case, all chat history should be deleted, and page should be reloaded
+                    alert('An error occurred ; unfortunately your chat session will be lost.');
+                    ChatHistory.get().clear();
+                    location.reload();
                 }
             });
             this.client.activate();
@@ -87,24 +250,3 @@ class SupportUI {
 
 const ui = new SupportUI();
 ui.start();
-
-
-
-// OLD
-/*
-const socket = new SockJS('http://localhost:8080/ws');
-const stompClient = Stomp.over(socket);
-
-stompClient.connect({}, () => {
-    // Le support s'abonne aux messages des utilisateurs
-    stompClient.subscribe('/topic/support', (message) => {
-        console.log("Message d'un utilisateur:", JSON.parse(message.body));
-    });
-});
-
-// TODO
-// Envoyer un message au support
-function sendMessage(content) {
-    // stompClient.send("/app/support", {}, JSON.stringify({ sender: "user1", recipient: "support", content }));
-}
-*/
