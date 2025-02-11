@@ -7,4 +7,4 @@ package com.openclassrooms.ycyw.model;
  * Time:15:59
  */
 
-public record ChatMessage(String sender, String recipient, ChatMessageType type, String content) {}
+public record ChatMessage(String sender, String recipient, String content) {}
