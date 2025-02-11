@@ -27,8 +27,6 @@ export class ChatHistory {
     }
 
     save() {
-        console.log(this.entries);
-        console.log(JSON.stringify(this.entries));
         localStorage.setItem("chatHistory", JSON.stringify(this.entries));
     }
 
@@ -37,8 +35,7 @@ export class ChatHistory {
         if(!this.entries) {
             this.entries = [];
         }
-        let entry = this.entries.find(e => e.user == user);
-        console.log(entry);
+        let entry = this.entries.find(e => e.user === user);
         if(!entry) {
             entry = {user: user, messages: []};
             this.entries.push(entry);
@@ -94,10 +91,10 @@ export class Chat {
         this.subscribe();
     }
 
+    // restore messages from history
     restoreFromHistory(chatHistoryEntry) {
-        console.log(chatHistoryEntry);
         chatHistoryEntry.messages.forEach(messageObject => {
-            if(messageObject.sender == this.sender) {
+            if(messageObject.sender === this.sender) {
                 this.addSentMessage(messageObject.content);
             }
             else {
@@ -107,19 +104,23 @@ export class Chat {
         this.sendMessage(MESSAGE_TYPE.JOIN, "");
     }
 
+    // subscribe to the source queue and set handler
     subscribe() {
         this.client.subscribe(this.source, this.receiveMessage.bind(this));
     }
 
+    // display the "User is typing" hint
     displayTyping() {
         this.typing.style.display = 'block';
 
     }
 
+    // hide the "User is typing" hint
     hideTyping() {
         this.typing.style.display = '';
     }
 
+    // user quit the chat
     userQuit() {
         const messageElement = document.createElement('div');
         messageElement.className = 'quit-message';
@@ -127,6 +128,7 @@ export class Chat {
         this.addMessage(messageElement);
     }
 
+    // user joined the chat
     userJoin() {
         const messageElement = document.createElement('div');
         messageElement.className = 'join-message';
@@ -134,6 +136,7 @@ export class Chat {
         this.addMessage(messageElement);
     }
 
+    // add received message to the messages displayed
     addReceivedMessage(messageContent) {
         const messageElement = document.createElement('div');
         messageElement.className = 'received-message';
@@ -141,8 +144,8 @@ export class Chat {
         this.addMessage(messageElement);
     }
 
+    // receive a message
     receiveMessageObject(messageObject) {
-        console.log(messageObject);
         switch(messageObject.type) {
             case MESSAGE_TYPE.MESSAGE:
                 this.addReceivedMessage(messageObject.content);
@@ -155,9 +158,11 @@ export class Chat {
         }
     }
 
+    // receive a message
     receiveMessage(message) {
         this.receiveMessageObject(JSON.parse(message.body));
     }
+
     // adds a messageElement in the messages container
     addMessage(messageElement) {
         const message = document.createElement('div');
@@ -174,18 +179,20 @@ export class Chat {
         this.addMessage(messageElement);
     }
 
+    // send a message
     sendMessage(messageType, content) {
         const messageObject = { recipient: this.recipient, type: messageType, content: content};
         this.client.publish({
             destination: this.destination,
             body: JSON.stringify(messageObject)
         });
-        if(messageType == MESSAGE_TYPE.MESSAGE) {
+        if(messageType === MESSAGE_TYPE.MESSAGE) {
             this.addSentMessage(content);
             ChatHistory.get().addMessage(this.recipient, messageObject);
         }
     }
 
+    // build the html and set listeners elements needed
     buildUi() {
         this.wrapper = document.createElement('div');
         this.wrapper.className = 'chat';
@@ -199,21 +206,22 @@ export class Chat {
         // build message form
         const messageFormContainer = document.createElement('div');
         messageFormContainer.className = 'message-form';
-        const formHtml = `
+        messageFormContainer.innerHTML = `
             <form method="post">
                 <input type="text" name="message" placeholder="Type your message">
                 <button type="submit">Send</button>
             </form>`;
-        messageFormContainer.innerHTML = formHtml;
         this.wrapper.appendChild(messageFormContainer);
         this.messageForm = messageFormContainer.getElementsByTagName('form')[0];
         this.messageInput = this.messageForm.elements['message'];
 
         // add listeners for form events
+
+        // typing
         let timeout = null;
         let isTyping = false;
         this.messageInput.addEventListener('keydown', (e) => {
-            if(!isTyping && e.keyCode != "Enter") {
+            if(!isTyping && e.keyCode !== "Enter") {
                 isTyping = true;
                 timeout = setTimeout(() => {
                     timeout = null;
@@ -222,7 +230,8 @@ export class Chat {
             }
         });
 
-        this.messageInput.addEventListener('blur', (e) => {
+        // stop typing
+        this.messageInput.addEventListener('blur', () => {
            if(timeout) {
                clearTimeout(timeout);
            }
@@ -235,6 +244,7 @@ export class Chat {
            }
         });
 
+        // submit message form -> send message
         this.messageForm.addEventListener('submit', (e) => {
             e.preventDefault();
             if(timeout) {
@@ -247,7 +257,8 @@ export class Chat {
             e.target.message.value = '';
         });
 
-        window.addEventListener("beforeunload", (e) => {
+        // send quit message on page quit
+        window.addEventListener("beforeunload", () => {
             this.sendMessage(MESSAGE_TYPE.QUIT, '');
         });
 

@@ -1,6 +1,9 @@
 import {MESSAGE_TYPE, Chat, ChatHistory} from './chat.js';
 import { Client } from '@stomp/stompjs';
 
+/**
+ * A user waiting for connection with a support agent
+ */
 class WaitingUser {
     username = null;
     callback = null;
@@ -24,6 +27,9 @@ class WaitingUser {
     }
 }
 
+/**
+ * A user connected with a support agent
+ */
 class ChatUser {
 
     username = null;
@@ -74,7 +80,6 @@ class SupportUI {
 
     createChat(username, chatHistoryEntry = null) {
         const url = this.client.webSocket._transport.url;
-        console.log(url);
         this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)(\/websocket)?/)[1];
         this.chats[username] = new Chat(this.client, username,`/user/queue/messages/${username}-user${this.socketSessionId}`, "/app/private");
         if(chatHistoryEntry) {
@@ -90,7 +95,7 @@ class SupportUI {
 
     // support user wants to handle chat with username
     handleUser(username) {
-        // brodacast the handle message
+        // broadcast the handle message
         this.client.publish({
             destination: '/app/support',
             body: JSON.stringify({
@@ -124,7 +129,6 @@ class SupportUI {
     // handle message broadcast on /topic/support
     handleMessage(message) {
         const messageObject = JSON.parse(message.body);
-        console.log(messageObject);
 
         switch(messageObject.type) {
             // new user has arrived and waits to be handled by someone from support
@@ -144,6 +148,7 @@ class SupportUI {
         }
     }
 
+    // handle a message received and update unread messages if needed
     handleUserMessage(message) {
         const messageObject = JSON.parse(message.body);
 
@@ -155,7 +160,7 @@ class SupportUI {
         }
     }
 
-    // let's see if we can restore previous interrupted chat(s)
+    // Restore previous interrupted chat(s) if possible
     // 1. from localstorage
     // 2. TODO from backend with fetch
     async restoreFromHistory() {
@@ -163,7 +168,7 @@ class SupportUI {
         if(!chatHistoryEntries) {
             // TODO load chat history from backend
         }
-        console.log(chatHistoryEntries);
+
         // from the user point of view, there is one and only one chat with a support agent
         if(chatHistoryEntries == null || !Array.isArray(chatHistoryEntries)) {
             return false;
@@ -174,6 +179,7 @@ class SupportUI {
         });
     }
 
+    // restore waiting users list from API call result
     restoreWaitingUsers() {
         fetch("/api/chat/users?filter=waiting").then(r => r.json().then(json => {
            if(Array.isArray(json)) {
@@ -182,6 +188,7 @@ class SupportUI {
         }));
     }
 
+    // create user interface html elements and add them to the wrapper
     createUi() {
         // create containers for chats, waiting users and currently handled users
         this.wrapper = document.getElementById('chatWrapper');
@@ -203,7 +210,6 @@ class SupportUI {
         this.wrapper.appendChild(this.chatsContainer);
     }
 
-    // at first, the user has to wait for a connection with a support agent
     start() {
         try {
             this.client = new Client({
@@ -215,9 +221,10 @@ class SupportUI {
                 onConnect: () => {
                     this.createUi();
 
+                    // subscribe to messages sent to the support topic
                     this.client.subscribe('/topic/support', this.handleMessage.bind(this));
 
-                    // let's see if we can restore chats from history
+                    // restore chats and waiting users if available
                     try {
                         this.restoreFromHistory();
                         this.restoreWaitingUsers();

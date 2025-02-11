@@ -24,7 +24,6 @@ class UI {
     // 2. TODO from backend with fetch
     async restoreChat() {
         let chatHistoryEntries = ChatHistory.get().entries;
-        console.log(chatHistoryEntries);
         if(!chatHistoryEntries) {
             // TODO load chat history from backend
         }
@@ -36,7 +35,6 @@ class UI {
 
         let chatHistoryEntry = chatHistoryEntries[0];
         this.displayChat(chatHistoryEntry.user, chatHistoryEntry);
-        console.log(chatHistoryEntries);
     }
 
     startChat() {
