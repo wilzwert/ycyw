@@ -30,7 +30,6 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/support.html").hasRole("SUPPORT")
                         .requestMatchers("/js/support.js").hasRole("SUPPORT")
-                        // .requestMatchers("/ws/**").authenticated()  // WebSocket sécurisé
                         .anyRequest().permitAll() // Le reste est public
                 )
                 .formLogin(withDefaults()) // Form Login
@@ -41,6 +40,10 @@ public class SecurityConfiguration {
         return http.build();
     }
 
+    /**
+     * Mock users
+     * @return the UserDetailsService
+     */
     @Bean
     public UserDetailsService userDetailsService() {
         UserDetails user = User.withDefaultPasswordEncoder()

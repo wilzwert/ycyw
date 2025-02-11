@@ -20,6 +20,11 @@ public class ChatService {
     // store waiting usernames to allow retrieval for support users
     private final HashSet<String> waitingUsers = new HashSet<>();
 
+    /**
+     *
+     * @param httpSessionId the http session id
+     * @return a generated username or an existent one if http session id already has one
+     */
     public String getGeneratedUsername(String httpSessionId) {
         if(usernames.containsKey(httpSessionId)) {
             return usernames.get(httpSessionId);
@@ -38,6 +43,11 @@ public class ChatService {
         return username;
     }
 
+    /**
+     *
+     * @param username the username of the user
+     * @return true if username already handled by a support agent
+     */
     public boolean hasActiveSession(String username) {
         return activeSessions.containsKey(username);
     }
@@ -52,14 +62,26 @@ public class ChatService {
         removeWaitingUser(username);
     }
 
+    /**
+     * Adds a username to the list of users waiting to be handled by support
+     * @param username the username of the chat user
+     */
     public void addWaitingUser(String username) {
         waitingUsers.add(username);
     }
 
+    /**
+     * Removes a username to the list of users waiting to be handled by support
+     * @param username the username of the chat user
+     */
     public void removeWaitingUser(String username) {
         waitingUsers.remove(username);
     }
 
+    /**
+     *
+     * @return the set of users waiting to be handled by support
+     */
     public Set<String> getWaitingUsers() {
         return waitingUsers;
     }

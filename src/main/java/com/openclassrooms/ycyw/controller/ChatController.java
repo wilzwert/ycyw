@@ -46,11 +46,10 @@ public class ChatController {
     }
 
     /**
-     * Hand messages sent to the /topic/support topic
+     * Handle messages sent to the /topic/support topic
      * @param message the message sent to support
      * @param principal the user sending the message
-     * @param accessor an accessor used to retrieve
-     *
+     * @param accessor an accessor used to retrieve http session id
      */
     @MessageMapping("/support")
     public void sendSupportMessage(@Payload ChatMessage message, Principal principal, StompHeaderAccessor accessor) {
@@ -77,8 +76,6 @@ public class ChatController {
                     messagingTemplate.convertAndSendToUser(principal.getName(), "/user/queue/messages", result);
                 }
                 else {
-                    System.out.println("Add waiting "+principal.getName());
-
                     // add username to waiting users list
                     chatService.addWaitingUser(principal.getName());
 
