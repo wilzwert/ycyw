@@ -14,18 +14,21 @@ import java.util.stream.Collectors;
 
 @Service
 public class ChatService {
+    // map http session ids to generated usernames
     private final HashMap<String, String> usernames = new HashMap<>();
-    private final HashMap<String, String> sessions = new HashMap<>();
+    // map usernames to support users http session id
     private final HashMap<String, String> activeSessions = new HashMap<>();
+    // store waiting usernames to allow retrieval for support users
+    private final HashSet<String> waitingUsers = new HashSet<>();
 
-    public String getUsername(String httpSessionId) {
+    public String getGeneratedUsername(String httpSessionId) {
         if(usernames.containsKey(httpSessionId)) {
             return usernames.get(httpSessionId);
         }
 
         // generate anonymous user and prevent collision with existing users
         int c = this.usernames.size()+1;
-        String username = "";
+        String username;
         do {
             c++;
             username = "user"+c;
@@ -41,32 +44,35 @@ public class ChatService {
     }
 
     /**
-     * Memoize a simpSessionId for the username
-     * @param username
-     * @param simpSessionId
+     * Memoize the support agent's sessionId handling the chat session opened for username
+     * @param username the user who is now connected to a support agent
+     * @param httpSessionId the http session id of the support agent
      */
-    public void registerSimpSession(String username, String simpSessionId) {
-        sessions.put(simpSessionId, username);
+    public void setActiveSession(String username, String httpSessionId) {
+        activeSessions.put(username, httpSessionId);
+        removeWaitingUser(username);
     }
 
-    /**
-     * Memoize the support agent's sessionId handling the chat session opened for username
-     * @param username
-     * @param sessionId
-     */
-    public void setActiveSession(String username, String sessionId) {
-        activeSessions.put(username, sessionId);
+    public void addWaitingUser(String username) {
+        waitingUsers.add(username);
+    }
+
+    public void removeWaitingUser(String username) {
+        waitingUsers.remove(username);
+    }
+
+    public Set<String> getWaitingUsers() {
+        return waitingUsers;
     }
 
     /**
      *
-     * @param sessionId
+     * @param httpSessionId the http session id
      * @return a list of usernames handled by the support user corresponding to the sessionId
      */
-    public List<String> getActiveSessions(String sessionId) {
-        return activeSessions.entrySet().stream()
-                .filter(entry -> entry.getValue().equals(sessionId))
-                .map(Map.Entry::getValue)
+    public List<String> getActiveSessions(String httpSessionId) {
+        return activeSessions.values().stream()
+                .filter(s -> s.equals(httpSessionId))
                 .collect(Collectors.toList());
     }
 }

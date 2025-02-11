@@ -50,11 +50,17 @@ public class SecurityConfiguration {
                 .build();
 
         UserDetails user2 = User.withDefaultPasswordEncoder()
+                .username("agent")
+                .password("password")
+                .roles("SUPPORT")
+                .build();
+
+        UserDetails user3 = User.withDefaultPasswordEncoder()
                 .username("client")
                 .password("password")
                 .roles("USER")
                 .build();
 
-        return new InMemoryUserDetailsManager(user, user2);
+        return new InMemoryUserDetailsManager(user, user2, user3);
     }
 }

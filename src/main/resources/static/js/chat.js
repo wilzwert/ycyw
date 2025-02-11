@@ -4,7 +4,68 @@ export const MESSAGE_TYPE = {
     MESSAGE: 'MESSAGE',
     TYPING: 'TYPING',
     STOP_TYPING: 'STOP_TYPING',
-    QUIT: 'QUIT'
+    QUIT: 'QUIT',
+    JOIN: 'JOIN'
+}
+
+export const MESSAGE_HISTORY_TYPE = {
+
+}
+
+export class ChatHistory {
+
+    static _INSTANCE = null;
+
+    entries = null;
+
+    constructor(entries) {
+        this.entries = entries;
+    }
+
+    get entries() {
+        return this.entries;
+    }
+
+    save() {
+        console.log(this.entries);
+        console.log(JSON.stringify(this.entries));
+        localStorage.setItem("chatHistory", JSON.stringify(this.entries));
+    }
+
+    addMessage(user, messageObject) {
+        // find entry for the user
+        if(!this.entries) {
+            this.entries = [];
+        }
+        let entry = this.entries.find(e => e.user == user);
+        console.log(entry);
+        if(!entry) {
+            entry = {user: user, messages: []};
+            this.entries.push(entry);
+        }
+        entry.messages.push(messageObject);
+        this.save();
+    }
+
+    clear() {
+        localStorage.removeItem("chatHistory");
+        this.entries = null;
+    }
+
+    static get() {
+        if(ChatHistory._INSTANCE == null) {
+            let history = localStorage.getItem("chatHistory");
+            let entries = null;
+            if(history) {
+                try {
+                    entries = JSON.parse(history);
+                }
+                catch(e) {}
+            }
+            ChatHistory._INSTANCE = new ChatHistory(entries);
+        }
+        return ChatHistory._INSTANCE;
+    }
 }
 
 export class Chat {
@@ -33,6 +94,19 @@ export class Chat {
         this.subscribe();
     }
 
+    restoreFromHistory(chatHistoryEntry) {
+        console.log(chatHistoryEntry);
+        chatHistoryEntry.messages.forEach(messageObject => {
+            if(messageObject.sender == this.sender) {
+                this.addSentMessage(messageObject.content);
+            }
+            else {
+                this.addReceivedMessage(messageObject.content);
+            }
+        });
+        this.sendMessage(MESSAGE_TYPE.JOIN, "");
+    }
+
     subscribe() {
         this.client.subscribe(this.source, this.receiveMessage.bind(this));
     }
@@ -53,6 +127,13 @@ export class Chat {
         this.addMessage(messageElement);
     }
 
+    userJoin() {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'join-message';
+        messageElement.innerHTML = 'User has joined the chat.';
+        this.addMessage(messageElement);
+    }
+
     addReceivedMessage(messageContent) {
         const messageElement = document.createElement('div');
         messageElement.className = 'received-message';
@@ -62,20 +143,22 @@ export class Chat {
 
     receiveMessageObject(messageObject) {
         console.log(messageObject);
-        if(messageObject.sender == this.recipient) {
-            switch(messageObject.type) {
-                case MESSAGE_TYPE.MESSAGE: this.addReceivedMessage(messageObject.content); break;
-                case MESSAGE_TYPE.TYPING: this.displayTyping(); break;
-                case MESSAGE_TYPE.STOP_TYPING: this.hideTyping(); break;
-                case MESSAGE_TYPE.QUIT: this.userQuit(); break;
-            }
+        switch(messageObject.type) {
+            case MESSAGE_TYPE.MESSAGE:
+                this.addReceivedMessage(messageObject.content);
+                ChatHistory.get().addMessage(this.recipient, messageObject);
+                break;
+            case MESSAGE_TYPE.TYPING: this.displayTyping(); break;
+            case MESSAGE_TYPE.STOP_TYPING: this.hideTyping(); break;
+            case MESSAGE_TYPE.QUIT: this.userQuit(); break;
+            case MESSAGE_TYPE.JOIN: this.userJoin(); break;
         }
     }
 
     receiveMessage(message) {
         this.receiveMessageObject(JSON.parse(message.body));
     }
-
+    // adds a messageElement in the messages container
     addMessage(messageElement) {
         const message = document.createElement('div');
         message.className = 'message';
@@ -83,6 +166,7 @@ export class Chat {
         this.messagesContainer.appendChild(message);
     }
 
+    // builds a specific message html element and then delegates to addMessage to add it to the ui
     addSentMessage(messageContent) {
         const messageElement = document.createElement('div');
         messageElement.className = 'sent-message';
@@ -91,12 +175,14 @@ export class Chat {
     }
 
     sendMessage(messageType, content) {
+        const messageObject = { recipient: this.recipient, type: messageType, content: content};
         this.client.publish({
             destination: this.destination,
-            body: JSON.stringify({ recipient: this.recipient, type: messageType, content: content})
+            body: JSON.stringify(messageObject)
         });
         if(messageType == MESSAGE_TYPE.MESSAGE) {
             this.addSentMessage(content);
+            ChatHistory.get().addMessage(this.recipient, messageObject);
         }
     }
 

@@ -31,21 +31,15 @@ public class CustomHandshakeHandler extends DefaultHandshakeHandler {
                                       WebSocketHandler wsHandler,
                                       Map<String, Object> attributes) {
 
-        ServletServerHttpRequest httpRequest = (ServletServerHttpRequest) request;
-        String sessionId = httpRequest.getServletRequest().getSession().getId();
-        System.out.println("SESSION ID "+sessionId);
-
-        // use actual user authentication if available and only if user does not have the SUPPORT role
+        // use actual user authentication if available
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof UserDetails) {
             return auth;
         }
 
-        String username = this.chatService.getUsername(sessionId);
-        return new Principal() {
-            public String getName() {
-                return username;
-            }
-        };
+        ServletServerHttpRequest httpRequest = (ServletServerHttpRequest) request;
+        String sessionId = httpRequest.getServletRequest().getSession().getId();
+        String username = this.chatService.getGeneratedUsername(sessionId);
+        return () -> username;
     }
 }

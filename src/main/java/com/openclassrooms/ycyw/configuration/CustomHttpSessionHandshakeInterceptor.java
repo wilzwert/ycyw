@@ -16,11 +16,12 @@ public class CustomHttpSessionHandshakeInterceptor implements HandshakeIntercept
             ServerHttpRequest request,
             ServerHttpResponse response,
             WebSocketHandler wsHandler,
-            Map<String, Object> attributes) throws Exception {
+            Map<String, Object> attributes) {
 
-        if (request instanceof ServletServerHttpRequest) {
-            ServletServerHttpRequest servletRequest = (ServletServerHttpRequest) request;
+        if (request instanceof ServletServerHttpRequest servletRequest) {
             HttpSession session = servletRequest.getServletRequest().getSession();
+            // pass the http session id as an attribute
+            // this session id may be used to map users and sessions in the ChatController and ChatService
             attributes.put("sessionId", session.getId());
         }
         return true;

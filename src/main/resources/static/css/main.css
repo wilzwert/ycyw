@@ -107,8 +107,9 @@ html {
     float: left;
 }
 
-.quit-message {
+.quit-message, .join-message {
     font-style: italic;
+    font-size: .8em;
 }
 
 .message-form {
