@@ -4,7 +4,6 @@ package com.openclassrooms.ycyw.service;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * @author Wilhelm Zwertvaegher
@@ -63,16 +62,5 @@ public class ChatService {
 
     public Set<String> getWaitingUsers() {
         return waitingUsers;
-    }
-
-    /**
-     *
-     * @param httpSessionId the http session id
-     * @return a list of usernames handled by the support user corresponding to the sessionId
-     */
-    public List<String> getActiveSessions(String httpSessionId) {
-        return activeSessions.values().stream()
-                .filter(s -> s.equals(httpSessionId))
-                .collect(Collectors.toList());
     }
 }

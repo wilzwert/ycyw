@@ -131,6 +131,10 @@ class SupportUI {
             case MESSAGE_TYPE.START :
                     this.addWaitingUser(messageObject.sender)
                 break;
+            // a user has quit before they have been handled by someone from support
+            case MESSAGE_TYPE.QUIT :
+                this.removeWaitingUser(messageObject.sender)
+                break;
             // a waiting user is handled by a support agent
             case MESSAGE_TYPE.HANDLE :
                 // FIXME : it does not really make sense to consider that the user is the recipient
@@ -143,9 +147,9 @@ class SupportUI {
     handleUserMessage(message) {
         const messageObject = JSON.parse(message.body);
 
-        if(messageObject.type == MESSAGE_TYPE.MESSAGE && messageObject.sender != this.currentChat) {
-            let user = this.handledContainer.childNodes.values().find(u => u.firstChild.innerHTML == messageObject.sender);
-            let count = user.childNodes[1].innerHTML == '' ? 0 : parseInt(user.childNodes[1].innerHTML);
+        if(messageObject.type === MESSAGE_TYPE.MESSAGE && messageObject.sender !== this.currentChat) {
+            let user = this.handledContainer.childNodes.values().find(u => u.firstChild.innerHTML === messageObject.sender);
+            let count = user.childNodes[1].innerHTML === '' ? 0 : parseInt(user.childNodes[1].innerHTML);
             count++;
             user.childNodes[1].innerHTML = count;
         }
@@ -224,7 +228,7 @@ class SupportUI {
                     // if the broker closed the connection, there's a good chance something terrible happened
                     // and the system probably won't be able to reconnect users as we don't persist anything for this POC
                     // in that specific case, all chat history should be deleted, and page should be reloaded
-                    alert('clear history');
+                    alert('An error occurred ; unfortunately your chat session will be lost.');
                     ChatHistory.get().clear();
                     location.reload();
                 }

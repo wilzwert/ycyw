@@ -5,7 +5,6 @@ import com.openclassrooms.ycyw.model.ChatMessage;
 import com.openclassrooms.ycyw.model.ChatMessageType;
 import com.openclassrooms.ycyw.service.ChatService;
 import org.springframework.http.MediaType;
-import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -56,37 +55,46 @@ public class ChatController {
     @MessageMapping("/support")
     public void sendSupportMessage(@Payload ChatMessage message, Principal principal, StompHeaderAccessor accessor) {
 
-        // if user gets handled, then we can send them a handle message
-        if(message.type().equals(ChatMessageType.HANDLE)) {
-            Object httpSessionIdObject = Objects.requireNonNull(accessor.getSessionAttributes()).get("sessionId");
-            String httpSessionId = (String) httpSessionIdObject;
-            // this chat session will be attached to the current support user's http session
-            // this allows us to have a unique user participating in different chats in different sessions
-            this.chatService.setActiveSession(message.recipient(), httpSessionId);
+        ChatMessage result;
+        switch (message.type()) {
+            case HANDLE :
+                Object httpSessionIdObject = Objects.requireNonNull(accessor.getSessionAttributes()).get("sessionId");
+                String httpSessionId = (String) httpSessionIdObject;
+                // this chat session will be attached to the current support user's http session
+                // this allows us to have a unique user participating in different chats in different sessions
+                this.chatService.setActiveSession(message.recipient(), httpSessionId);
 
-            ChatMessage result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.HANDLE, "");
-            // let the user know
-            messagingTemplate.convertAndSendToUser(message.recipient(), "/user/queue/messages", result);
-            // let all support users know
-            messagingTemplate.convertAndSend("/topic/support", result);
-
-        }
-        else if(message.type().equals(ChatMessageType.START)) {
-            if(this.chatService.hasActiveSession(principal.getName())) {
-                // let the user know they're already handled
-                ChatMessage result = new ChatMessage(message.recipient(), principal.getName(), ChatMessageType.HANDLE, "");
-                messagingTemplate.convertAndSendToUser(principal.getName(), "/user/queue/messages", result);
-            }
-            else {
-                System.out.println("Add waiting "+principal.getName());
-
-                // add username to waiting users list
-                chatService.addWaitingUser(principal.getName());
-
-                // broadcast start message to support
-                ChatMessage result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.START, "");
+                result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.HANDLE, "");
+                // let the user know
+                messagingTemplate.convertAndSendToUser(message.recipient(), "/user/queue/messages", result);
+                // let all support users know
                 messagingTemplate.convertAndSend("/topic/support", result);
-            }
+                break;
+            case START:
+                if(this.chatService.hasActiveSession(principal.getName())) {
+                    // let the user know they're already handled
+                    result = new ChatMessage(message.recipient(), principal.getName(), ChatMessageType.HANDLE, "");
+                    messagingTemplate.convertAndSendToUser(principal.getName(), "/user/queue/messages", result);
+                }
+                else {
+                    System.out.println("Add waiting "+principal.getName());
+
+                    // add username to waiting users list
+                    chatService.addWaitingUser(principal.getName());
+
+                    // broadcast start message to support
+                    result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.START, "");
+                    messagingTemplate.convertAndSend("/topic/support", result);
+                }
+                break;
+            case QUIT:
+                if(!this.chatService.hasActiveSession(principal.getName())) {
+                    this.chatService.removeWaitingUser(principal.getName());
+                }
+                result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.QUIT, "");
+                // let all support users know
+                messagingTemplate.convertAndSend("/topic/support", result);
+                break;
         }
     }
 

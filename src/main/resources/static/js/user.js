@@ -5,6 +5,7 @@ class UI {
 
     client = null;
     socketSessionId = null;
+    handled = false;
 
     constructor() {
     }
@@ -45,9 +46,17 @@ class UI {
             body: JSON.stringify({ sender: "", recipient: 'support', type: MESSAGE_TYPE.START, content: ''})
         });
 
+        window.addEventListener("beforeunload", (e) => {
+            this.client.publish({
+                destination: '/app/support',
+                body: JSON.stringify({ sender: "", recipient: 'support', type: MESSAGE_TYPE.QUIT, content: ''})
+            });
+        });
+
         this.client.subscribe(`/user/queue/messages-user${this.socketSessionId}`, (message) => {
             let messageObject = JSON.parse(message.body);
             if(messageObject.type == MESSAGE_TYPE.HANDLE) {
+                this.handled = true;
                 this.displayChat(messageObject.sender);
             }
         });
@@ -78,7 +87,7 @@ class UI {
                     // if the broker closed the connection, there's a good chance something terrible happened
                     // and the system probably won't be able to reconnect users as we don't persist anything for this POC
                     // in that specific case, all chat history should be deleted, and page should be reloaded
-                    alert('clear history');
+                    alert('An error occurred ; unfortunately your chat session will be lost.');
                     ChatHistory.get().clear();
                     location.reload();
                 }
