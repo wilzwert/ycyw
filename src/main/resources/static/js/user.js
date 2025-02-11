@@ -10,7 +10,7 @@ class UI {
     }
 
     displayChat() {
-        const chat = new Chat(this.client, this.socketSessionId, "support", `/user/queue/messages-user${this.socketSessionId}`, '/app/private');
+        const chat = new Chat(this.client, "support", `/user/queue/messages-user${this.socketSessionId}`, '/app/private');
         this.wrapper.innerHTML = '';
         this.wrapper.appendChild(chat.element);
     }
@@ -22,14 +22,15 @@ class UI {
             destination: '/app/support',
             body: JSON.stringify({ sender: this.socketSessionId, recipient: 'support', type: MESSAGE_TYPE.START, content: ''})
         });
-
+        this.wrapper.innerHTML = "You should soon be connected to one of our agents";
         this.client.subscribe(`/user/queue/messages-user${this.socketSessionId}`, (message) => {
-            let messageObject = JSON.parse(message);
+            console.log(message);
+            let messageObject = JSON.parse(message.body);
             if(messageObject.type == MESSAGE_TYPE.HANDLE) {
                 this.displayChat();
             }
         });
-        this.wrapper.innerHTML = "You should soon be connected to one of our agents";
+
     }
 
     connect() {

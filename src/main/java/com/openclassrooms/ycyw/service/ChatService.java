@@ -50,7 +50,7 @@ public class ChatService {
     }
 
     /**
-     * Memoize the support agent's sessionId of the chat session opened for username
+     * Memoize the support agent's sessionId handling the chat session opened for username
      * @param username
      * @param sessionId
      */

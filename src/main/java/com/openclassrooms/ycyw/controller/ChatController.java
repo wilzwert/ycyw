@@ -4,11 +4,13 @@ package com.openclassrooms.ycyw.controller;
 import com.openclassrooms.ycyw.model.ChatMessage;
 import com.openclassrooms.ycyw.model.ChatMessageType;
 import com.openclassrooms.ycyw.service.ChatService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -43,7 +45,7 @@ public class ChatController {
      * @throws Exception
      */
     @MessageMapping("/support")
-    public void sendStartMessage(@Payload ChatMessage message, Principal principal, @Header("simpSessionId") String sessionId) throws Exception {
+    public void sendSupportMessage(@Payload ChatMessage message, Principal principal, @Header("simpSessionId") String sessionId, StompHeaderAccessor accessor) throws Exception {
         System.out.println("User message");
         System.out.println(principal.getName());
         System.out.println(message);
@@ -51,8 +53,17 @@ public class ChatController {
         System.out.println(this.userRegistry.getUsers());
         System.out.println("SESSION "+sessionId);
 
+        this.chatService.registerSimpSession(principal.getName(), sessionId);
+
         // if user already is handled, then we can send them a handle message
-        if(this.chatService.hasActiveSession(principal.getName()) || message.type().equals(ChatMessageType.HANDLE)) {
+        if(message.type().equals(ChatMessageType.HANDLE)) {
+            String httpSessionId = accessor.getSessionAttributes().get("sessionId").toString();
+            // this chat session will be attached to the current user's http session
+            // this allows us to have a unique user participating in different chats in different sessions
+            this.chatService.setActiveSession(message.recipient(), httpSessionId);
+            System.out.println("HTTP Session is "+httpSessionId);
+
+            System.out.println("IS ALREADY HANDLED "+message.recipient());
             // TODO
             ChatMessage result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.HANDLE, "");
             // let the user know
@@ -61,9 +72,17 @@ public class ChatController {
             messagingTemplate.convertAndSend("/topic/support", result);
 
         }
-        else {
-            this.chatService.registerSimpSession(principal.getName(), sessionId);
-            messagingTemplate.convertAndSend("/topic/support", message);
+        else if(message.type().equals(ChatMessageType.START)) {
+            if(this.chatService.hasActiveSession(principal.getName())) {
+                // let the user know
+                ChatMessage result = new ChatMessage(message.recipient(), principal.getName(), ChatMessageType.HANDLE, "");
+                messagingTemplate.convertAndSendToUser(principal.getName(), "/user/queue/messages", result);
+            }
+            else {
+                System.out.println("LEt's broadcast start message");
+                ChatMessage result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.START, "");
+                messagingTemplate.convertAndSend("/topic/support", result);
+            }
         }
     }
 
@@ -97,6 +116,7 @@ public class ChatController {
         System.out.println(message.type());
         System.out.println(this.userRegistry.getUsers());
 
+        // this chat session will be attached to the current user's http session
         this.chatService.setActiveSession(message.recipient(), RequestContextHolder.currentRequestAttributes().getSessionId());
 
         // FIXME : it does not really make sense to consider that the user is the recipient
@@ -104,12 +124,13 @@ public class ChatController {
     }
 
     @MessageMapping("/private")
-    public void sendPrivateMessage(@Payload ChatMessage message) {
+    public void sendPrivateMessage(@Payload ChatMessage message, Principal principal) {
         System.out.println("Support message");
         System.out.println(message);
         if(message.recipient() != null) {
             System.out.println("send to "+message.recipient());
-            messagingTemplate.convertAndSendToUser(message.recipient(), "/user/queue/messages", message);
+            ChatMessage result = new ChatMessage(principal.getName(), message.recipient(), message.type(), message.content());
+            messagingTemplate.convertAndSendToUser(message.recipient(), "/user/queue/messages", result);
         }
     }
 }

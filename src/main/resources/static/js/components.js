@@ -24,9 +24,8 @@ export class Chat {
     messageForm = null;
     messageInput = null;
 
-    constructor(client, sender, recipient, source, destination) {
+    constructor(client, recipient, source, destination) {
         this.client = client;
-        this.sender = sender;
         this.recipient = recipient;
         this.source = source;
         this.destination = destination;
@@ -62,6 +61,7 @@ export class Chat {
     }
 
     receiveMessageObject(messageObject) {
+        console.log(messageObject);
         if(messageObject.sender == this.recipient) {
             switch(messageObject.type) {
                 case MESSAGE_TYPE.MESSAGE: this.addReceivedMessage(messageObject.content); break;
@@ -93,7 +93,7 @@ export class Chat {
     sendMessage(messageType, content) {
         this.client.publish({
             destination: this.destination,
-            body: JSON.stringify({ sender: this.sender, recipient: this.recipient, type: messageType, content: content})
+            body: JSON.stringify({ recipient: this.recipient, type: messageType, content: content})
         });
         if(messageType == MESSAGE_TYPE.MESSAGE) {
             this.addSentMessage(content);
