@@ -30,7 +30,7 @@ class UI {
         }
 
         // from the user point of view, there is one and only one chat with a support agent
-        if(chatHistoryEntries == null || !Array.isArray(chatHistoryEntries) ||  chatHistoryEntries.length != 1) {
+        if(chatHistoryEntries == null || !Array.isArray(chatHistoryEntries) ||  chatHistoryEntries.length !== 1) {
             return false;
         }
 
@@ -46,7 +46,7 @@ class UI {
             body: JSON.stringify({ sender: "", recipient: 'support', type: MESSAGE_TYPE.START, content: ''})
         });
 
-        window.addEventListener("beforeunload", (e) => {
+        window.addEventListener("beforeunload", () => {
             this.client.publish({
                 destination: '/app/support',
                 body: JSON.stringify({ sender: "", recipient: 'support', type: MESSAGE_TYPE.QUIT, content: ''})
@@ -55,7 +55,7 @@ class UI {
 
         this.client.subscribe(`/user/queue/messages-user${this.socketSessionId}`, (message) => {
             let messageObject = JSON.parse(message.body);
-            if(messageObject.type == MESSAGE_TYPE.HANDLE) {
+            if(messageObject.type === MESSAGE_TYPE.HANDLE) {
                 this.handled = true;
                 this.displayChat(messageObject.sender);
             }
