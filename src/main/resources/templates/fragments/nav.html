@@ -1,0 +1,22 @@
+<div class="main-nav">
+  <nav>
+    <ul>
+      <li>
+        <a href="/">Home</a>
+      </li>
+      <li sec:authorize="!hasRole('SUPPORT')">
+        <a href="/chat" title="Chat with support">Chat with support</a>
+      </li>
+      <li sec:authorize="!isAuthenticated()">
+        <a href="/login">Login</a>
+      </li>
+      <li sec:authorize="hasRole('SUPPORT')">
+        <a href="/support">Go to support interface</a>
+      </li>
+      <li sec:authorize="isAuthenticated()">
+        [<span sec:authentication="name"></span>]
+        <a href="/logout">Logout</a>
+      </li>
+    </ul>
+  </nav>
+</div>

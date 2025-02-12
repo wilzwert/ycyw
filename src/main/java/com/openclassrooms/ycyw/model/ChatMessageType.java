@@ -13,5 +13,7 @@ public enum ChatMessageType {
     STOP_TYPING,
     MESSAGE,
     QUIT,
-    JOIN
+    JOIN,
+    PING,
+    PING_RESPONSE
 }
