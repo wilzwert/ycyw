@@ -1,12 +1,11 @@
 import {MESSAGE_TYPE, Chat, ChatHistory, ChatService} from './chat.js';
 import { Client } from '@stomp/stompjs';
 
-class UI {
+class UserChat {
 
     chatHistory = null;
     client = null;
     socketSessionId = null;
-    handled = false;
 
     constructor() {
     }
@@ -56,7 +55,6 @@ class UI {
         this.client.subscribe(`/user/queue/messages-user${this.socketSessionId}`, (message) => {
             let messageObject = JSON.parse(message.body);
             if(messageObject.type === MESSAGE_TYPE.HANDLE) {
-                this.handled = true;
                 this.displayChat(messageObject.sender);
             }
         });
@@ -121,5 +119,5 @@ class UI {
     };
 }
 
-const ui = new UI();
-ui.start();
+const chat = new UserChat();
+chat.start();

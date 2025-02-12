@@ -31,12 +31,14 @@ public class CustomHandshakeHandler extends DefaultHandshakeHandler {
                                       WebSocketHandler wsHandler,
                                       Map<String, Object> attributes) {
 
-        // use actual user authentication if available
+        // use actual user authentication if available as it is linked to the http session
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof UserDetails) {
             return auth;
         }
 
+        // return username associated to the session
+        // it may be a new one or the already existing one if it exists
         ServletServerHttpRequest httpRequest = (ServletServerHttpRequest) request;
         String sessionId = httpRequest.getServletRequest().getSession().getId();
         String username = this.chatService.getGeneratedUsername(sessionId);
