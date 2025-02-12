@@ -51,26 +51,25 @@ class ChatUser {
     }
 }
 
-class SupportUI {
-    client = null;
-    chats = {};
-    waitingUsers = {};
-    handledContainer = null;
-    waitingContainer = null;
-    chatsContainer = null;
-    currentChat = null;
-    wrapper = null;
-
+class SupportChat {
+    #client = null;
+    #chats = {};
+    #waitingUsers = {};
+    #handledContainer = null;
+    #waitingContainer = null;
+    #chatsContainer = null;
+    #currentChat = null;
+    #wrapper = null;
 
     constructor() {
     }
 
     displayChat(username) {
-        if(this.currentChat !== username) {
-            this.chatsContainer.innerHTML = '';
-            this.chatsContainer.appendChild(this.chats[username].element);
-            this.currentChat = username;
-            this.handledContainer.childNodes.forEach(userContainer => {
+        if(this.#currentChat !== username) {
+            this.#currentChat = username;
+            this.#chatsContainer.innerHTML = '';
+            this.#chatsContainer.appendChild(this.#chats[username].element);
+            this.#handledContainer.childNodes.forEach(userContainer => {
                 userContainer.className = 'user '+(userContainer.firstChild.innerHTML === username ? ' active' : '')
                 // reset displayed new messages count
                 userContainer.childNodes[1].innerHTML = '';
@@ -81,29 +80,29 @@ class SupportUI {
     removeChat(chat) {
         let username = chat.recipient;
         // remove chat container
-        if(typeof this.chats[username] != 'undefined') {
-            delete(this.chats[username]);
+        if(typeof this.#chats[username] != 'undefined') {
+            delete(this.#chats[username]);
 
             // remove user container
-            let handled = Array.from(this.handledContainer.childNodes).find(e => e.firstChild.innerHTML === username);
+            let handled = Array.from(this.#handledContainer.childNodes).find(e => e.firstChild.innerHTML === username);
             if(handled) {
                 handled.parentNode.removeChild(handled);
             }
 
             // set active chat if needed and possible
-            if(this.currentChat === username) {
-                this.currentChat = null;
-                this.chatsContainer.innerHTML = '';
-                if(this.handledContainer.childNodes.length) {
-                    this.displayChat(this.handledContainer.childNodes[0].firstChild.innerHTML);
+            if(this.#currentChat === username) {
+                this.#currentChat = null;
+                this.#chatsContainer.innerHTML = '';
+                if(this.#handledContainer.childNodes.length) {
+                    this.displayChat(this.#handledContainer.childNodes[0].firstChild.innerHTML);
                 }
             }
         }
     }
 
     createChat(username, chatHistoryEntry = null) {
-        this.chats[username] = new Chat({
-            client: this.client,
+        this.#chats[username] = new Chat({
+            client: this.#client,
             recipient: username,
             source: `/user/queue/messages/${username}-user${this.socketSessionId}`,
             destination: "/app/private",
@@ -111,20 +110,20 @@ class SupportUI {
             onPingTimeout: this.removeChat.bind(this)
         });
         if(chatHistoryEntry) {
-            this.chats[username].restoreFromHistory(chatHistoryEntry);
+            this.#chats[username].restoreFromHistory(chatHistoryEntry);
         }
 
         const user = new ChatUser(username, this.displayChat.bind(this));
-        this.handledContainer.appendChild(user.element);
+        this.#handledContainer.appendChild(user.element);
         this.displayChat(username);
 
-        this.client.subscribe(`/user/queue/messages/${username}-user${this.socketSessionId}`, this.handleUserMessage.bind(this))
+        this.#client.subscribe(`/user/queue/messages/${username}-user${this.socketSessionId}`, this.handleUserMessage.bind(this))
     }
 
     // support user wants to handle chat with username
     handleUser(username) {
         // broadcast the handle message
-        this.client.publish({
+        this.#client.publish({
             destination: '/app/support',
             body: JSON.stringify({
                 sender: this.socketSessionId,
@@ -139,18 +138,18 @@ class SupportUI {
 
     // display new waiting user
     addWaitingUser(username) {
-        if (typeof this.chats[username] == "undefined" && typeof this.waitingUsers[username] == "undefined") {
-            this.waitingUsers[username] = new WaitingUser(username, this.handleUser.bind(this));
-            this.waitingContainer.appendChild(this.waitingUsers[username].element);
+        if (typeof this.#chats[username] == "undefined" && typeof this.#waitingUsers[username] == "undefined") {
+            this.#waitingUsers[username] = new WaitingUser(username, this.handleUser.bind(this));
+            this.#waitingContainer.appendChild(this.#waitingUsers[username].element);
         }
     }
 
     // remove user from waiting users list
     removeWaitingUser(username) {
-        if(typeof this.waitingUsers[username] != "undefined") {
-            let element = this.waitingUsers[username].element;
+        if(typeof this.#waitingUsers[username] != "undefined") {
+            let element = this.#waitingUsers[username].element;
             element.parentNode.removeChild(element);
-            delete this.waitingUsers[username];
+            delete this.#waitingUsers[username];
         }
     }
 
@@ -180,8 +179,8 @@ class SupportUI {
     handleUserMessage(message) {
         const messageObject = JSON.parse(message.body);
 
-        if(messageObject.type === MESSAGE_TYPE.MESSAGE && messageObject.sender !== this.currentChat) {
-            let user = this.handledContainer.childNodes.values().find(u => u.firstChild.innerHTML === messageObject.sender);
+        if(messageObject.type === MESSAGE_TYPE.MESSAGE && messageObject.sender !== this.#currentChat) {
+            let user = this.#handledContainer.childNodes.values().find(u => u.firstChild.innerHTML === messageObject.sender);
             let count = user.childNodes[1].innerHTML === '' ? 0 : parseInt(user.childNodes[1].innerHTML);
             count++;
             user.childNodes[1].innerHTML = count;
@@ -214,28 +213,28 @@ class SupportUI {
     // create user interface html elements and add them to the wrapper
     createUi() {
         // create containers for chats, waiting users and currently handled users
-        this.wrapper = document.getElementById('chatWrapper');
-        this.wrapper.innerHTML = '';
+        this.#wrapper = document.getElementById('chatWrapper');
+        this.#wrapper.innerHTML = '';
 
-        this.waitingContainer = document.createElement('div');
-        this.waitingContainer.className = 'waiting-users';
+        this.#waitingContainer = document.createElement('div');
+        this.#waitingContainer.className = 'waiting-users';
 
-        this.handledContainer = document.createElement('div');
-        this.handledContainer.className = 'handled-users';
+        this.#handledContainer = document.createElement('div');
+        this.#handledContainer.className = 'handled-users';
         const usersContainer = document.createElement('div');
         usersContainer.className = 'users';
-        usersContainer.appendChild(this.handledContainer);
-        usersContainer.appendChild(this.waitingContainer);
-        this.wrapper.appendChild(usersContainer);
+        usersContainer.appendChild(this.#handledContainer);
+        usersContainer.appendChild(this.#waitingContainer);
+        this.#wrapper.appendChild(usersContainer);
 
-        this.chatsContainer = document.createElement('div');
-        this.chatsContainer.className = 'chats';
-        this.wrapper.appendChild(this.chatsContainer);
+        this.#chatsContainer = document.createElement('div');
+        this.#chatsContainer.className = 'chats';
+        this.#wrapper.appendChild(this.#chatsContainer);
     }
 
     // called when websocket is connected
     async websocketConnected() {
-        const url = this.client.webSocket._transport.url;
+        const url = this.#client.webSocket._transport.url;
         this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)(\/websocket)?/)[1];
 
         // websocket connected means we now have a username
@@ -247,7 +246,7 @@ class SupportUI {
         this.createUi();
 
         // subscribe to messages sent to the support topic
-        this.client.subscribe('/topic/support', this.handleMessage.bind(this));
+        this.#client.subscribe('/topic/support', this.handleMessage.bind(this));
 
         // restore chats and waiting users if available
         try {
@@ -269,7 +268,7 @@ class SupportUI {
         try {
             this.chatHistory = await ChatHistory.get();
 
-            this.client = new Client({
+            this.#client = new Client({
                 // debug: console.log,
                 // Typical usage with SockJS
                 webSocketFactory: function () {
@@ -278,7 +277,7 @@ class SupportUI {
                 onConnect: () => this.websocketConnected(),
                 onWebSocketClose: () => this.websocketClosed()
             });
-            this.client.activate();
+            this.#client.activate();
         }
         catch(ex) {
             console.log(ex);
@@ -286,5 +285,5 @@ class SupportUI {
     };
 }
 
-const ui = new SupportUI();
-ui.start();
+const chat = new SupportChat();
+chat.start();
