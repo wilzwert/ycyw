@@ -37,7 +37,7 @@ public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
                 .setHandshakeHandler(new CustomHandshakeHandler(chatService))
-                .addInterceptors(new CustomHttpSessionHandshakeInterceptor())
+                // .addInterceptors(new CustomHttpSessionHandshakeInterceptor())
                 .withSockJS();
     }
 }
