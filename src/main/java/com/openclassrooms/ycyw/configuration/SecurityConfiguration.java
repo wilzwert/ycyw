@@ -28,12 +28,12 @@ public class SecurityConfiguration {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/support.html").hasRole("SUPPORT")
+                        .requestMatchers("/support").hasRole("SUPPORT")
                         .requestMatchers("/js/support.js").hasRole("SUPPORT")
                         .anyRequest().permitAll() // Le reste est public
                 )
                 .formLogin(withDefaults()) // Form Login
-                .logout(withDefaults()) // default logout
+                .logout((logout) -> logout.logoutSuccessUrl("/")) // logout redirects to home
                 .csrf(AbstractHttpConfigurer::disable) // deactivate CSRF for this POC
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
 

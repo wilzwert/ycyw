@@ -1,4 +1,4 @@
-import {MESSAGE_TYPE, Chat, ChatHistory} from './chat.js';
+import {MESSAGE_TYPE, Chat, ChatHistory, ChatService} from './chat.js';
 import { Client } from '@stomp/stompjs';
 
 /**
@@ -53,8 +53,8 @@ class ChatUser {
 
 class SupportUI {
     client = null;
-    chats = [];
-    waitingUsers = [];
+    chats = {};
+    waitingUsers = {};
     handledContainer = null;
     waitingContainer = null;
     chatsContainer = null;
@@ -78,10 +78,38 @@ class SupportUI {
         }
     }
 
+    removeChat(chat) {
+        let username = chat.recipient;
+        // remove chat container
+        if(typeof this.chats[username] != 'undefined') {
+            delete(this.chats[username]);
+
+            // remove user container
+            let handled = Array.from(this.handledContainer.childNodes).find(e => e.firstChild.innerHTML === username);
+            if(handled) {
+                handled.parentNode.removeChild(handled);
+            }
+
+            // set active chat if needed and possible
+            if(this.currentChat === username) {
+                this.currentChat = null;
+                this.chatsContainer.innerHTML = '';
+                if(this.handledContainer.childNodes.length) {
+                    this.displayChat(this.handledContainer.childNodes[0].firstChild.innerHTML);
+                }
+            }
+        }
+    }
+
     createChat(username, chatHistoryEntry = null) {
-        const url = this.client.webSocket._transport.url;
-        this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)(\/websocket)?/)[1];
-        this.chats[username] = new Chat(this.client, username,`/user/queue/messages/${username}-user${this.socketSessionId}`, "/app/private");
+        this.chats[username] = new Chat({
+            client: this.client,
+            recipient: username,
+            source: `/user/queue/messages/${username}-user${this.socketSessionId}`,
+            destination: "/app/private",
+            chatHistory: this.chatHistory,
+            onPingTimeout: this.removeChat.bind(this)
+        });
         if(chatHistoryEntry) {
             this.chats[username].restoreFromHistory(chatHistoryEntry);
         }
@@ -120,8 +148,8 @@ class SupportUI {
     // remove user from waiting users list
     removeWaitingUser(username) {
         if(typeof this.waitingUsers[username] != "undefined") {
-            let elmt = this.waitingUsers[username].element;
-            elmt.parentNode.removeChild(elmt);
+            let element = this.waitingUsers[username].element;
+            element.parentNode.removeChild(element);
             delete this.waitingUsers[username];
         }
     }
@@ -161,15 +189,10 @@ class SupportUI {
     }
 
     // Restore previous interrupted chat(s) if possible
-    // 1. from localstorage
-    // 2. TODO from backend with fetch
     async restoreFromHistory() {
-        let chatHistoryEntries = ChatHistory.get().entries;
-        if(!chatHistoryEntries) {
-            // TODO load chat history from backend
-        }
+        let chatHistoryEntries = this.chatHistory.entries;
 
-        // from the user point of view, there is one and only one chat with a support agent
+        // no entries mean there is nothing we can restore
         if(chatHistoryEntries == null || !Array.isArray(chatHistoryEntries)) {
             return false;
         }
@@ -210,35 +233,50 @@ class SupportUI {
         this.wrapper.appendChild(this.chatsContainer);
     }
 
-    start() {
+    // called when websocket is connected
+    async websocketConnected() {
+        const url = this.client.webSocket._transport.url;
+        this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)(\/websocket)?/)[1];
+
+        // websocket connected means we now have a username
+        // so we pass it to the ChatHistory if needed
+        if(this.chatHistory.owner === null) {
+            this.chatHistory.owner = await ChatService.getUsername();
+        }
+
+        this.createUi();
+
+        // subscribe to messages sent to the support topic
+        this.client.subscribe('/topic/support', this.handleMessage.bind(this));
+
+        // restore chats and waiting users if available
         try {
+            await this.restoreFromHistory();
+            this.restoreWaitingUsers();
+        }
+        catch(e) {}
+    }
+
+    // called when websocket closed
+    websocketClosed() {
+        // if the broker closed the connection, it may indicate a problem with the server
+        // or that an authenticated user logged out
+        // in that specific case, page should be reloaded to try to reload chat
+        location.reload();
+    }
+
+    async start() {
+        try {
+            this.chatHistory = await ChatHistory.get();
+
             this.client = new Client({
-                debug: console.log,
+                // debug: console.log,
                 // Typical usage with SockJS
                 webSocketFactory: function () {
                     return new SockJS("http://localhost:8080/ws");
                 },
-                onConnect: () => {
-                    this.createUi();
-
-                    // subscribe to messages sent to the support topic
-                    this.client.subscribe('/topic/support', this.handleMessage.bind(this));
-
-                    // restore chats and waiting users if available
-                    try {
-                        this.restoreFromHistory();
-                        this.restoreWaitingUsers();
-                    }
-                    catch(e) {}
-                },
-                onWebSocketClose: () => {
-                    // if the broker closed the connection, there's a good chance something terrible happened
-                    // and the system probably won't be able to reconnect users as we don't persist anything for this POC
-                    // in that specific case, all chat history should be deleted, and page should be reloaded
-                    alert('An error occurred ; unfortunately your chat session will be lost.');
-                    ChatHistory.get().clear();
-                    location.reload();
-                }
+                onConnect: () => this.websocketConnected(),
+                onWebSocketClose: () => this.websocketClosed()
             });
             this.client.activate();
         }

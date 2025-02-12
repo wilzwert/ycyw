@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+    <title>CHAT POC</title>
+    <link rel="stylesheet" href="/default-ui.css">
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<script type="text/javascript">
+  window.addEventListener('storage', function(event) {
+    console.log('storage changes', event);
+  });
+  console.log(localStorage.getItem("TEST"));
+  localStorage.setItem("TEST", '{"test":"true"}');
+</script>
+
+</body>
+</html>

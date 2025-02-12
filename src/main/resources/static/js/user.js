@@ -1,8 +1,9 @@
-import {MESSAGE_TYPE, Chat, ChatHistory} from './chat.js';
+import {MESSAGE_TYPE, Chat, ChatHistory, ChatService} from './chat.js';
 import { Client } from '@stomp/stompjs';
 
 class UI {
 
+    chatHistory = null;
     client = null;
     socketSessionId = null;
     handled = false;
@@ -11,7 +12,14 @@ class UI {
     }
 
     displayChat(username, chatHistoryEntry = null) {
-        const chat = new Chat(this.client, username, `/user/queue/messages/${username}-user${this.socketSessionId}`, '/app/private');
+        const chat = new Chat({
+            client: this.client,
+            recipient: username,
+            source: `/user/queue/messages/${username}-user${this.socketSessionId}`,
+            destination: '/app/private',
+            chatHistory: this.chatHistory
+        });
+
         if(chatHistoryEntry) {
             chat.restoreFromHistory(chatHistoryEntry);
         }
@@ -19,25 +27,19 @@ class UI {
         this.wrapper.appendChild(chat.element);
     }
 
-    // let's see if we can restore previous interrupted chat
-    // 1. from localstorage
-    // 2. TODO from backend with fetch
+    // Restore previous interrupted chat if possible
     async restoreChat() {
-        let chatHistoryEntries = ChatHistory.get().entries;
-        if(!chatHistoryEntries) {
-            // TODO load chat history from backend
-        }
+        let chatHistoryEntries = this.chatHistory.entries;
 
         // from the user point of view, there is one and only one chat with a support agent
         if(chatHistoryEntries == null || !Array.isArray(chatHistoryEntries) ||  chatHistoryEntries.length !== 1) {
             return false;
         }
-
         let chatHistoryEntry = chatHistoryEntries[0];
         this.displayChat(chatHistoryEntry.user, chatHistoryEntry);
     }
 
-    startChat() {
+    async startChat() {
         this.wrapper.innerHTML = "You should soon be connected to one of our agents";
         this.client.publish({
             destination: '/app/support',
@@ -67,28 +69,40 @@ class UI {
         }
     }
 
-    connect() {
+    async websocketConnected() {
+        let url = this.client.webSocket._transport.url;
+        this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)\/websocket/)[1];
+
+        // websocket connected means we now have a username
+        // so we pass it to the ChatHistory if needed
+        if(this.chatHistory.owner === null) {
+            this.chatHistory.owner = await ChatService.getUsername();
+        }
+
+        await this.createChat();
+    }
+
+    // called when websocket closed
+    websocketClosed() {
+        // if the broker closed the connection, it may indicate a problem with the server
+        // or that an authenticated user logged out
+        // in that specific case, page should be reloaded to try to reload chat
+        location.reload();
+    }
+
+
+    async connect() {
         try {
+            this.chatHistory = await ChatHistory.get();
+
             this.client = new Client({
-                debug: console.log,
+                // debug: console.log,
                 // Typical usage with SockJS
                 webSocketFactory: function () {
                     return new SockJS("http://localhost:8080/ws");
                 },
-                onConnect: () => {
-                    // send start message
-                    let url = this.client.webSocket._transport.url;
-                    this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)\/websocket/)[1];
-                    this.createChat();
-                },
-                onWebSocketClose: () => {
-                    // if the broker closed the connection, there's a good chance something terrible happened
-                    // and the system probably won't be able to reconnect users as we don't persist anything for this POC
-                    // in that specific case, all chat history should be deleted, and page should be reloaded
-                    alert('An error occurred ; unfortunately your chat session will be lost.');
-                    ChatHistory.get().clear();
-                    location.reload();
-                }
+                onConnect: () => this.websocketConnected(),
+                onWebSocketClose: () => this.websocketClosed()
             });
             this.client.activate();
         }
@@ -101,6 +115,7 @@ class UI {
         // reset display
         this.wrapper = document.getElementById('chatWrapper');
         this.wrapper.innerHTML = '';
+
         // connect to websocket
         this.connect();
     };

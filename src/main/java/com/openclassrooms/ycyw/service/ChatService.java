@@ -1,6 +1,9 @@
 package com.openclassrooms.ycyw.service;
 
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -15,10 +18,27 @@ import java.util.*;
 public class ChatService {
     // map http session ids to generated usernames
     private final HashMap<String, String> usernames = new HashMap<>();
-    // map usernames to support users http session id
-    private final HashMap<String, String> activeSessions = new HashMap<>();
-    // store waiting usernames to allow retrieval for support users
+    // store waiting usernames to allow retrieval
     private final HashSet<String> waitingUsers = new HashSet<>();
+
+    /**
+     * Returns the username associated with the http session
+     * @param httpSessionId the http session identifier
+     * @return an optional with the username if present
+     */
+    public Optional<String> getSessionUsername(String httpSessionId) {
+        // use actual user authentication if available
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof UserDetails) {
+            return Optional.of(auth.getName());
+        }
+
+        String username = usernames.get(httpSessionId);
+        if (username != null) {
+            return Optional.of(username);
+        }
+        return Optional.empty();
+    }
 
     /**
      *
@@ -41,25 +61,6 @@ public class ChatService {
 
         this.usernames.put(httpSessionId, username);
         return username;
-    }
-
-    /**
-     *
-     * @param username the username of the user
-     * @return true if username already handled by a support agent
-     */
-    public boolean hasActiveSession(String username) {
-        return activeSessions.containsKey(username);
-    }
-
-    /**
-     * Memoize the support agent's sessionId handling the chat session opened for username
-     * @param username the user who is now connected to a support agent
-     * @param httpSessionId the http session id of the support agent
-     */
-    public void setActiveSession(String username, String httpSessionId) {
-        activeSessions.put(username, httpSessionId);
-        removeWaitingUser(username);
     }
 
     /**
