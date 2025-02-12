@@ -215,7 +215,8 @@ class ChatUI {
     sendMessage(e) {
         e.preventDefault();
         this.stopTyping();
-        this.#onSendMessage();
+        this.#onSendMessage(e.target.message);
+        e.target.message.value = '';
     }
 
     userInactive() {
@@ -264,6 +265,7 @@ class ChatUI {
         message.className = 'message';
         message.appendChild(messageElement);
         this.#messagesContainer.appendChild(message);
+        this.#messagesContainer.scrollTop = this.#messagesContainer.scrollHeight;
     }
 
     // builds a specific message html element and then delegates to addMessage to add it to the ui
