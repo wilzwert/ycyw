@@ -46,19 +46,19 @@ public class SecurityConfiguration {
      */
     @Bean
     public UserDetailsService userDetailsService() {
-        UserDetails user = User.withDefaultPasswordEncoder()
+        UserDetails user = User.builder()
                 .username("support")
                 .password("password")
                 .roles("SUPPORT")
                 .build();
 
-        UserDetails user2 = User.withDefaultPasswordEncoder()
+        UserDetails user2 = User.builder()
                 .username("agent")
                 .password("password")
                 .roles("SUPPORT")
                 .build();
 
-        UserDetails user3 = User.withDefaultPasswordEncoder()
+        UserDetails user3 = User.builder()
                 .username("client")
                 .password("password")
                 .roles("USER")

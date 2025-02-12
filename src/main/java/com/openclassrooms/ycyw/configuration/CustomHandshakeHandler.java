@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 
+
 import java.security.Principal;
 import java.util.Map;
 
@@ -30,6 +31,11 @@ public class CustomHandshakeHandler extends DefaultHandshakeHandler {
     protected Principal determineUser(ServerHttpRequest request,
                                       WebSocketHandler wsHandler,
                                       Map<String, Object> attributes) {
+
+        // extract Jwt token if present
+
+        // if jwt token not present or in error, refuse connection
+
 
         // use actual user authentication if available
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
