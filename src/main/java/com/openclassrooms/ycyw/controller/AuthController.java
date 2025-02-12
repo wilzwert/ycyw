@@ -44,8 +44,9 @@ public class AuthController {
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public JwtResponse login(@RequestBody(required = false)  LoginRequestDto loginRequestDto, Authentication authentication) {
         String username;
+        String authType;
         boolean hasAnonymousRole = false;
-
+        System.out.println(authentication);
         try {
             // authentication already exists
             // wa can upgrade an anonymous to a "regular" user but not the other way around
@@ -54,7 +55,10 @@ public class AuthController {
                         .anyMatch(r -> r.getAuthority().equals("ROLE_ANONYMOUS"));
             }
 
+            log.info("Authentication {}, hasAnonymousRole {}", authentication, hasAnonymousRole);
+
             if(loginRequestDto != null) {
+                authType = "user";
                 // login via username and password should not be used to authenticate if already authenticated
                 if(authentication != null && !hasAnonymousRole) {
                     username = authentication.getName();
@@ -74,9 +78,11 @@ public class AuthController {
             // no username/password and already authenticated, use current authentication
             else if(authentication != null) {
                 username = authentication.getName();
+                authType = hasAnonymousRole ? "anonymous" : "user";
             }
             // no username/password and not authenticated : generate anonoymous username
             else {
+                authType = "anonymous";
                 username = this.usernameGeneratorService.generateUsername();
             }
         }
@@ -85,7 +91,8 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Login failed. " + e.getMessage());
         }
 
-        String token = jwtService.generateToken(username);
+        log.info("Generate token for {}, authType {}", username, authType);
+        String token = jwtService.generateToken(username, authType);
         return new JwtResponse(token, "Bearer", username);
     }
 }

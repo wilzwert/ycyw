@@ -52,8 +52,9 @@ public class JwtService {
         try {
             Jwt<?, ?> parsedToken = Jwts
                     .parser().verifyWith(getSignInKey()).build().parse(token);
+            System.out.println(parsedToken.getPayload());
             Claims claims = (Claims) parsedToken.getPayload();
-
+            System.out.println(claims);
             JwtToken jwtToken = new JwtToken(claims.getSubject(), claims);
             return Optional.of(jwtToken);
         }
@@ -86,11 +87,12 @@ public class JwtService {
      * @param username the username we want to generate the token for
      * @return the JWT Token
      */
-    public String generateToken(String username) {
+    public String generateToken(String username, String authType) {
         log.info("Generating JWT token for user {}", username);
         return Jwts
                 .builder()
                 .subject(username)
+                .claim("authType", authType)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(getSignInKey())
