@@ -13,7 +13,9 @@ import lombok.*;
 public class JwtResponse {
   private String token;
 
-  private String type = "Bearer";
+  private String type = "anonymous";
 
   private String username;
+
+  private String role;
 }

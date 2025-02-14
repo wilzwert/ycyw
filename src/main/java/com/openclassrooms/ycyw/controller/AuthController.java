@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +18,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * Auth-related REST controller
@@ -45,12 +49,14 @@ public class AuthController {
     public JwtResponse login(@RequestBody(required = false)  LoginRequestDto loginRequestDto, Authentication authentication) {
         String username;
         String authType;
+        Collection<? extends GrantedAuthority> authorities = new ArrayList<>();
         boolean hasAnonymousRole = false;
         System.out.println(authentication);
         try {
             // authentication already exists
             // wa can upgrade an anonymous to a "regular" user but not the other way around
             if(authentication != null) {
+                authorities = authentication.getAuthorities();
                 hasAnonymousRole = authentication.getAuthorities().stream()
                         .anyMatch(r -> r.getAuthority().equals("ROLE_ANONYMOUS"));
             }
@@ -72,6 +78,7 @@ public class AuthController {
                         throw new BadCredentialsException("Wrong password");
                     }
                     username = user.getUsername();
+                    authorities = user.getAuthorities();
                     log.info("User with username {} successfully authenticated, sending JWT token", loginRequestDto.getUsername());
                 }
             }
@@ -91,8 +98,20 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Login failed. " + e.getMessage());
         }
 
+
+        String role = "ANONYMOUS";
+        if(!authType.equals("anonymous")) {
+            boolean hasSupportRole = authorities.stream()
+                    .anyMatch(r -> r.getAuthority().equals("ROLE_SUPPORT"));
+            if (hasSupportRole) {
+                role = "SUPPORT";
+            } else {
+                role = "USER";
+            }
+        }
+
         log.info("Generate token for {}, authType {}", username, authType);
         String token = jwtService.generateToken(username, authType);
-        return new JwtResponse(token, "Bearer", username);
+        return new JwtResponse(token, "Bearer", username, role);
     }
 }
