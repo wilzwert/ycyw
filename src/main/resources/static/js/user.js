@@ -6,15 +6,18 @@ class UserChat {
     chatHistory = null;
     client = null;
     socketSessionId = null;
+    username = null;
 
     constructor() {
     }
 
     displayChat(username, chatHistoryEntry = null) {
         const chat = new Chat({
+            sender: this.username,
             client: this.client,
             recipient: username,
-            source: `/user/queue/messages/${username}-user${this.socketSessionId}`,
+            // source: `/user/queue/messages/${username}-user${this.socketSessionId}`,
+            source: `/user/queue/messages/${username}`,
             destination: '/app/private',
             chatHistory: this.chatHistory
         });
@@ -42,17 +45,18 @@ class UserChat {
         this.wrapper.innerHTML = "You should soon be connected to one of our agents";
         this.client.publish({
             destination: '/app/support',
-            body: JSON.stringify({ sender: "", recipient: 'support', type: MESSAGE_TYPE.START, content: ''})
+            body: JSON.stringify({ sender: this.username, recipient: 'support', type: MESSAGE_TYPE.START, content: ''})
         });
 
         window.addEventListener("beforeunload", () => {
             this.client.publish({
                 destination: '/app/support',
-                body: JSON.stringify({ sender: "", recipient: 'support', type: MESSAGE_TYPE.QUIT, content: ''})
+                body: JSON.stringify({ sender: this.username, recipient: 'support', type: MESSAGE_TYPE.QUIT, content: ''})
             });
         });
 
-        this.client.subscribe(`/user/queue/messages-user${this.socketSessionId}`, (message) => {
+        // this.client.subscribe(`/user/queue/messages-user${this.socketSessionId}`, (message) => {
+        this.client.subscribe(`/user/queue/messages`, (message) => {
             let messageObject = JSON.parse(message.body);
             if(messageObject.type === MESSAGE_TYPE.HANDLE) {
                 this.displayChat(messageObject.sender);
@@ -68,13 +72,14 @@ class UserChat {
     }
 
     async websocketConnected() {
-        let url = this.client.webSocket._transport.url;
-        this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)\/websocket/)[1];
-
+        // let url = this.client.webSocket._transport.url;
+        // this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)\/websocket/)[1];
+        this.username = await ChatService.getUsername();
         // websocket connected means we now have a username
         // so we pass it to the ChatHistory if needed
         if(this.chatHistory.owner === null) {
-            this.chatHistory.owner = await ChatService.getUsername();
+            this.chatHistory.owner = this.username;
+            console.log(this.chatHistory.owner);
         }
 
         await this.createChat();
@@ -92,13 +97,15 @@ class UserChat {
     async connect() {
         try {
             this.chatHistory = await ChatHistory.get();
+            let token = await ChatService.getToken();
 
             this.client = new Client({
                 // debug: console.log,
+                brokerURL: "ws://localhost:8080/ws?token="+token,
                 // Typical usage with SockJS
-                webSocketFactory: function () {
+                /* webSocketFactory: function () {
                     return new SockJS("http://localhost:8080/ws");
-                },
+                },*/
                 onConnect: () => this.websocketConnected(),
                 onWebSocketClose: () => this.websocketClosed()
             });

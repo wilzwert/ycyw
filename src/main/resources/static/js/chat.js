@@ -14,18 +14,39 @@ export const MESSAGE_TYPE = {
 
 export class ChatService {
     static #username = null;
+    static #token = null;
+
+    static async #load() {
+        // try and get the token and username from localStorage if we can
+        let tokenStr = localStorage.getItem("authToken");
+        let tokenObj, token, username = null;
+        if(tokenStr) {
+            tokenObj = JSON.parse(tokenStr);
+        }
+        else {
+            // or else get one from the API and store it in localStorage
+            const response = await fetch("/api/auth/login", {method: "POST"});
+            if (response.ok) {
+                tokenObj = await response.json();
+                localStorage.setItem("authToken", JSON.stringify(tokenObj));
+            }
+        }
+        ChatService.#token = tokenObj.token;
+        ChatService.#username = tokenObj.username;
+    }
 
     static async getUsername() {
         if(ChatService.#username == null) {
-            const response = await fetch("/api/chat/me");
-            if(response.ok) {
-                const json = await response.json();
-                if(json.username) {
-                    ChatService.#username = json.username;
-                }
-            }
+            await ChatService.#load();
         }
         return ChatService.#username;
+    }
+
+    static async getToken() {
+        if(ChatService.#token == null) {
+            await ChatService.#load();
+        }
+        return ChatService.#token;
     }
 }
 
@@ -305,8 +326,9 @@ export class Chat {
     // ChatUi
     #ui = null;
 
-    constructor({client, recipient, source, destination, chatHistory, onPingTimeout = null}) {
+    constructor({client, sender, recipient, source, destination, chatHistory, onPingTimeout = null}) {
         this.#client = client;
+        this.#sender = sender;
         this.#recipient = recipient;
         this.#source = source;
         this.#destination = destination;
@@ -465,6 +487,7 @@ export class Chat {
     // send a message
     sendMessage(messageType, content) {
         const messageObject = { sender: this.#sender, recipient: this.#recipient, type: messageType, content: content};
+        console.log(messageObject);
         this.#client.publish({
             destination: this.#destination,
             body: JSON.stringify(messageObject)

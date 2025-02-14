@@ -100,11 +100,14 @@ class SupportChat {
         }
     }
 
-    createChat(username, chatHistoryEntry = null) {
+    async createChat(username, chatHistoryEntry = null) {
+        alert(ChatService.getUsername());
         this.#chats[username] = new Chat({
             client: this.#client,
+            sender: await ChatService.getUsername(),
             recipient: username,
-            source: `/user/queue/messages/${username}-user${this.socketSessionId}`,
+            // source: `/user/queue/messages/${username}-user${this.socketSessionId}`,
+            source: `/user/queue/messages/${username}`,
             destination: "/app/private",
             chatHistory: this.chatHistory,
             onPingTimeout: this.removeChat.bind(this)
@@ -117,7 +120,11 @@ class SupportChat {
         this.#handledContainer.appendChild(user.element);
         this.displayChat(username);
 
-        this.#client.subscribe(`/user/queue/messages/${username}-user${this.socketSessionId}`, this.handleUserMessage.bind(this))
+        this.#client.subscribe(
+            // `/user/queue/messages/${username}-user${this.socketSessionId}`,
+            `/user/queue/messages/${username}`,
+            this.handleUserMessage.bind(this)
+        )
     }
 
     // support user wants to handle chat with username
@@ -126,7 +133,8 @@ class SupportChat {
         this.#client.publish({
             destination: '/app/support',
             body: JSON.stringify({
-                sender: this.socketSessionId,
+                // sender: this.socketSessionId,
+                sender: this.username,
                 recipient: username,
                 type: MESSAGE_TYPE.HANDLE,
                 content: username
@@ -233,14 +241,16 @@ class SupportChat {
     }
 
     // called when websocket is connected
-    async websocketConnected() {
-        const url = this.#client.webSocket._transport.url;
-        this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)(\/websocket)?/)[1];
-
+    async websocketConnected(ifr) {
+        console.log(ifr);
+        // const url = this.#client.webSocket._transport.url;
+        console.log(this.#client.webSocket);
+        // this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)(\/websocket)?/)[1];
+        this.username = await ChatService.getUsername()
         // websocket connected means we now have a username
         // so we pass it to the ChatHistory if needed
         if(this.chatHistory.owner === null) {
-            this.chatHistory.owner = await ChatService.getUsername();
+            this.chatHistory.owner = this.username;
         }
 
         this.createUi();
@@ -261,22 +271,30 @@ class SupportChat {
         // if the broker closed the connection, it may indicate a problem with the server
         // or that an authenticated user logged out
         // in that specific case, page should be reloaded to try to reload chat
-        location.reload();
+        // location.reload();
     }
 
     async start() {
         try {
             this.chatHistory = await ChatHistory.get();
-
+            let token = await ChatService.getToken();
+            console.log("Token "+token);
             this.#client = new Client({
+                brokerURL: "ws://localhost:8080/ws?token="+token,
                 // debug: console.log,
                 // Typical usage with SockJS
-                webSocketFactory: function () {
-                    return new SockJS("http://localhost:8080/ws");
-                },
-                onConnect: () => this.websocketConnected(),
-                onWebSocketClose: () => this.websocketClosed()
-            });
+                /*webSocketFactory: function () {
+                return new WebSocket("ws://localhost:8080/ws", null, {
+                      headers: {
+                        "Authorization": "Bearer "+token,
+                          "X-Custom": "TRUC"
+                      }
+                    });
+                    // return new SockJS("http://localhost:8080/ws");
+                },*/
+                onConnect: this.websocketConnected.bind(this),
+                onWebSocketClose: this.websocketClosed.bind(this)
+            }, console.log);
             this.#client.activate();
         }
         catch(ex) {

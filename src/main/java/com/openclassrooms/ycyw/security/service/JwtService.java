@@ -42,12 +42,18 @@ public class JwtService {
      * @throws SignatureException when JWT token's signature is invalid
      */
     public Optional<JwtToken> extractTokenFromRequest(HttpServletRequest request) throws ExpiredJwtException, MalformedJwtException, IllegalArgumentException, UnsupportedJwtException, SignatureException {
-        final String authHeader = request.getHeader("Authorization");
+        String authHeader = request.getHeader("Authorization");
+        String token;
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            log.info("Authorization header not found or not compatible with Bearer token");
-            return Optional.empty();
+            token = request.getParameter("token");
+            if(token == null || token.isEmpty()) {
+                // log.info("Authorization header not found or not compatible with Bearer token");
+                return Optional.empty();
+            }
         }
-        final String token = authHeader.substring(7);
+        else {
+            token = authHeader.substring(7);
+        }
 
         try {
             Jwt<?, ?> parsedToken = Jwts

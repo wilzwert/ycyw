@@ -2,6 +2,7 @@ package com.openclassrooms.ycyw.configuration;
 
 
 import com.openclassrooms.ycyw.service.ChatService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.security.core.Authentication;
@@ -19,6 +20,7 @@ import java.util.Map;
  * Date:06/02/2025
  * Time:23:07
  */
+@Slf4j
 public class CustomHandshakeHandler extends DefaultHandshakeHandler {
 
     private final ChatService chatService;
@@ -33,7 +35,18 @@ public class CustomHandshakeHandler extends DefaultHandshakeHandler {
                                       Map<String, Object> attributes) {
 
         // extract Jwt token if present
+        log.info("JWT Token extraction ? {}", request.getURI());
+        log.info("Headers are smw {}", request.getHeaders().get("Authorization"));
 
+        // use actual user authentication if available
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof UserDetails) {
+            return auth;
+        }
+
+        return () -> "";
+
+        /*
         // if jwt token not present or in error, refuse connection
 
 
@@ -46,6 +59,6 @@ public class CustomHandshakeHandler extends DefaultHandshakeHandler {
         ServletServerHttpRequest httpRequest = (ServletServerHttpRequest) request;
         String sessionId = httpRequest.getServletRequest().getSession().getId();
         String username = this.chatService.getGeneratedUsername(sessionId);
-        return () -> username;
+        return () -> username;*/
     }
 }

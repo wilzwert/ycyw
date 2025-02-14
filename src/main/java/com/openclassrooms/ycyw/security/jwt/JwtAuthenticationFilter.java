@@ -57,10 +57,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
         try {
+            log.info("Request {}", request.getRequestURI());
+            log.info("Token from params {}", request.getParameter("token"));
+            log.info("Request headers {}", request.getHeader("Authorization"));
             Optional<JwtToken> token = jwtService.extractTokenFromRequest(request);
             // if not token found, security filter chain continues
             if(token.isEmpty()) {
-                log.info("Token is empty");
                 filterChain.doFilter(request, response);
                 return;
             }
