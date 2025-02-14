@@ -43,6 +43,14 @@ class UserChat {
 
     async startChat() {
         this.wrapper.innerHTML = "You should soon be connected to one of our agents";
+        // this.client.subscribe(`/user/queue/messages-user${this.socketSessionId}`, (message) => {
+        this.client.subscribe(`/user/queue/messages`, (message) => {
+            let messageObject = JSON.parse(message.body);
+            if(messageObject.type === MESSAGE_TYPE.HANDLE) {
+                this.displayChat(messageObject.sender);
+            }
+        });
+
         this.client.publish({
             destination: '/app/support',
             body: JSON.stringify({ sender: this.username, recipient: 'support', type: MESSAGE_TYPE.START, content: ''})
@@ -55,13 +63,7 @@ class UserChat {
             });
         });
 
-        // this.client.subscribe(`/user/queue/messages-user${this.socketSessionId}`, (message) => {
-        this.client.subscribe(`/user/queue/messages`, (message) => {
-            let messageObject = JSON.parse(message.body);
-            if(messageObject.type === MESSAGE_TYPE.HANDLE) {
-                this.displayChat(messageObject.sender);
-            }
-        });
+
     }
 
     async createChat() {

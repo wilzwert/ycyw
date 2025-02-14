@@ -44,11 +44,12 @@ public class ChatController {
             case HANDLE :
                 result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.HANDLE, "");
                 // let the user know
-                messagingTemplate.convertAndSendToUser(message.recipient(), "/user/queue/messages", result);
+                messagingTemplate.convertAndSendToUser(message.recipient(), "/queue/messages", result);
                 // let all support users know
                 messagingTemplate.convertAndSend("/topic/support", result);
                 break;
             case START:
+                System.out.println("User sent START");
                 // add username to waiting users list
                 chatService.addWaitingUser(principal.getName());
 
@@ -86,7 +87,7 @@ public class ChatController {
     public void sendPrivateMessage(@Payload ChatMessage message, Principal principal) {
         if(message.recipient() != null) {
             ChatMessage result = new ChatMessage(principal.getName(), message.recipient(), message.type(), message.content());
-            messagingTemplate.convertAndSendToUser(message.recipient(), "/user/queue/messages/"+principal.getName(), result);
+            messagingTemplate.convertAndSendToUser(message.recipient(), "/queue/messages/"+principal.getName(), result);
         }
     }
 }

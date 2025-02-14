@@ -101,7 +101,6 @@ class SupportChat {
     }
 
     async createChat(username, chatHistoryEntry = null) {
-        alert(ChatService.getUsername());
         this.#chats[username] = new Chat({
             client: this.#client,
             sender: await ChatService.getUsername(),
