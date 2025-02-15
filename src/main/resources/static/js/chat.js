@@ -344,6 +344,7 @@ export class Chat {
 
     checkPingTimeout() {
         let delay = Math.floor((Date.now() - this.#lastReceived) / 1000);
+        // nothing happened
         if(delay > Chat.TIMEOUT) {
             this.userInactive();
             this.#chatHistory.removeUser(this.#recipient);
@@ -355,6 +356,10 @@ export class Chat {
             else {
                 setTimeout(() => location.reload(), 2000);
             }
+        }
+        // otherwise we juste ping again
+        else {
+            setTimeout(this.ping.bind(this), Chat.PING_DELAY*1000);
         }
     }
 
