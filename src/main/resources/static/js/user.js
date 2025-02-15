@@ -57,6 +57,8 @@ class UserChat {
         });
 
         window.addEventListener("beforeunload", () => {
+            alert('hein');
+            console.log(this.client);
             this.client.publish({
                 destination: '/app/support',
                 body: JSON.stringify({ sender: this.username, recipient: 'support', type: MESSAGE_TYPE.QUIT, content: ''})

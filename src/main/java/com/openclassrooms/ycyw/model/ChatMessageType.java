@@ -9,6 +9,7 @@ package com.openclassrooms.ycyw.model;
 public enum ChatMessageType {
     START,
     HANDLE,
+    GREETING,
     TYPING,
     STOP_TYPING,
     MESSAGE,

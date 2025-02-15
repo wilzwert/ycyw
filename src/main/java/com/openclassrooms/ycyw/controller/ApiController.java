@@ -50,6 +50,7 @@ public class ApiController {
         return this.userRegistry.getUsers().stream().map(SimpUser::getName).toList();
     }
 
+
     @GetMapping(value="/api/chat/me", produces = MediaType.APPLICATION_JSON_VALUE)
     public ChatUserDto retrieveUsername(HttpSession session) {
         Optional<String> sessionUsername = this.chatService.getSessionUsername(session.getId());

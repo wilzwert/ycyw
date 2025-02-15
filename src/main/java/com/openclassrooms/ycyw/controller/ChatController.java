@@ -42,6 +42,7 @@ public class ChatController {
         ChatMessage result;
         switch (message.type()) {
             case HANDLE :
+                this.chatService.removeWaitingUser(message.recipient());
                 result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.HANDLE, "");
                 // let the user know
                 messagingTemplate.convertAndSendToUser(message.recipient(), "/queue/messages", result);
@@ -59,7 +60,7 @@ public class ChatController {
                 break;
             case QUIT:
                 this.chatService.removeWaitingUser(principal.getName());
-                result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.QUIT, "");
+                result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.QUIT, "User has left the chat.");
                 // let all support users know
                 messagingTemplate.convertAndSend("/topic/support", result);
                 break;

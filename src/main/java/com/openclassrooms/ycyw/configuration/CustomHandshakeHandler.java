@@ -4,7 +4,6 @@ package com.openclassrooms.ycyw.configuration;
 import com.openclassrooms.ycyw.service.ChatService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.ServerHttpRequest;
-import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,42 +22,17 @@ import java.util.Map;
 @Slf4j
 public class CustomHandshakeHandler extends DefaultHandshakeHandler {
 
-    private final ChatService chatService;
-
-    public CustomHandshakeHandler(final ChatService chatService) {
-        this.chatService = chatService;
-    }
-
     @Override
     protected Principal determineUser(ServerHttpRequest request,
                                       WebSocketHandler wsHandler,
                                       Map<String, Object> attributes) {
-
-        // extract Jwt token if present
-        log.info("JWT Token extraction ? {}", request.getURI());
-        log.info("Headers are smw {}", request.getHeaders().get("Authorization"));
-
         // use actual user authentication if available
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof UserDetails) {
             return auth;
         }
 
+        // TODO : maybe we should throw an exception and refuse the handshake if possible
         return () -> "";
-
-        /*
-        // if jwt token not present or in error, refuse connection
-
-
-        // use actual user authentication if available
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof UserDetails) {
-            return auth;
-        }
-
-        ServletServerHttpRequest httpRequest = (ServletServerHttpRequest) request;
-        String sessionId = httpRequest.getServletRequest().getSession().getId();
-        String username = this.chatService.getGeneratedUsername(sessionId);
-        return () -> username;*/
     }
 }
