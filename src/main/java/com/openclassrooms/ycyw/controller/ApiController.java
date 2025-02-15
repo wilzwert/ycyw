@@ -1,10 +1,7 @@
 package com.openclassrooms.ycyw.controller;
 
 
-import com.openclassrooms.ycyw.dto.ChatUserDto;
 import com.openclassrooms.ycyw.service.ChatService;
-import jakarta.servlet.http.HttpSession;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.simp.user.SimpUser;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
@@ -12,9 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * @author Wilhelm Zwertvaegher
@@ -48,12 +43,5 @@ public class ApiController {
         }
 
         return this.userRegistry.getUsers().stream().map(SimpUser::getName).toList();
-    }
-
-
-    @GetMapping(value="/api/chat/me", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ChatUserDto retrieveUsername(HttpSession session) {
-        Optional<String> sessionUsername = this.chatService.getSessionUsername(session.getId());
-        return sessionUsername.map(ChatUserDto::new).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No user"));
     }
 }

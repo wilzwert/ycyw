@@ -1,7 +1,5 @@
 package com.openclassrooms.ycyw.configuration;
 
-
-import com.openclassrooms.ycyw.service.ChatService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -20,13 +18,6 @@ import org.springframework.web.socket.config.annotation.*;
 public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer//, WebSocketConfigurer
 {
 
-    private final ChatService chatService;
-
-    public WebSocketConfiguration(ChatService chatService) {
-        super();
-        this.chatService = chatService;
-    }
-
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/topic", "/queue");
@@ -37,7 +28,7 @@ public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer/
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setHandshakeHandler(new CustomHandshakeHandler(chatService))
+                .setHandshakeHandler(new CustomHandshakeHandler())
                 .setAllowedOrigins("*") // no CORS for this POC
                 ;
     }

@@ -1,11 +1,13 @@
-import {MESSAGE_TYPE, Chat, ChatHistory, ChatService} from './chat.js';
+"use strict";
+
+import {MESSAGE_TYPE, Chat, ChatHistory} from './chat.js';
 import { Client } from '@stomp/stompjs';
+import { TokenService } from './token.js';
 
 class UserChat {
 
     chatHistory = null;
     client = null;
-    socketSessionId = null;
     username = null;
 
     constructor() {
@@ -16,7 +18,6 @@ class UserChat {
             sender: this.username,
             client: this.client,
             recipient: username,
-            // source: `/user/queue/messages/${username}-user${this.socketSessionId}`,
             source: `/user/queue/messages/${username}`,
             destination: '/app/private',
             chatHistory: this.chatHistory
@@ -32,7 +33,7 @@ class UserChat {
     // Restore previous interrupted chat if possible
     async restoreChat() {
         let chatHistoryEntries = this.chatHistory.entries;
-
+console.log(chatHistoryEntries);
         // from the user point of view, there is one and only one chat with a support agent
         if(chatHistoryEntries == null || !Array.isArray(chatHistoryEntries) ||  chatHistoryEntries.length !== 1) {
             return false;
@@ -43,7 +44,6 @@ class UserChat {
 
     async startChat() {
         this.wrapper.innerHTML = "You should soon be connected to one of our agents";
-        // this.client.subscribe(`/user/queue/messages-user${this.socketSessionId}`, (message) => {
         this.client.subscribe(`/user/queue/messages`, (message) => {
             let messageObject = JSON.parse(message.body);
             if(messageObject.type === MESSAGE_TYPE.HANDLE) {
@@ -78,12 +78,14 @@ class UserChat {
     async websocketConnected() {
         // let url = this.client.webSocket._transport.url;
         // this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)\/websocket/)[1];
-        this.username = await ChatService.getUsername();
-        // websocket connected means we now have a username
-        // so we pass it to the ChatHistory if needed
+        this.username = await TokenService.getUsername();
+        // pass current username to the ChatHistory if needed
         if(this.chatHistory.owner === null) {
             this.chatHistory.owner = this.username;
-            console.log(this.chatHistory.owner);
+        }
+        // changing current user implies that all chats have been closed one way or another
+        else if(this.chatHistory.owner !== this.username) {
+            this.chatHistory.clear();
         }
 
         await this.createChat();
@@ -94,6 +96,7 @@ class UserChat {
         // if the broker closed the connection, it may indicate a problem with the server
         // or that an authenticated user logged out
         // in that specific case, page should be reloaded to try to reload chat
+        alert('wuuuut');
         location.reload();
     }
 
@@ -101,15 +104,11 @@ class UserChat {
     async connect() {
         try {
             this.chatHistory = await ChatHistory.get();
-            let token = await ChatService.getToken();
+            let token = await TokenService.getToken();
 
             this.client = new Client({
                 // debug: console.log,
                 brokerURL: "ws://localhost:8080/ws?token="+token,
-                // Typical usage with SockJS
-                /* webSocketFactory: function () {
-                    return new SockJS("http://localhost:8080/ws");
-                },*/
                 onConnect: () => this.websocketConnected(),
                 onWebSocketClose: () => this.websocketClosed()
             });

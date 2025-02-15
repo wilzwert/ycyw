@@ -27,6 +27,11 @@ public class PagesController {
         return "support";
     }
 
+    @RequestMapping("/login")
+    public String login() {
+        return "login";
+    }
+
     @RequestMapping("/testStorage")
     public String testStorage() {
         return "test_storage";

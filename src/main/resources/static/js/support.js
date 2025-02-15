@@ -1,4 +1,5 @@
-import {MESSAGE_TYPE, Chat, ChatHistory, ChatService} from './chat.js';
+import {MESSAGE_TYPE, Chat, ChatHistory} from './chat.js';
+import { TokenService} from "./token";
 import { Client } from '@stomp/stompjs';
 
 /**
@@ -103,7 +104,7 @@ class SupportChat {
     async createChat(username, chatHistoryEntry = null) {
         this.#chats[username] = new Chat({
             client: this.#client,
-            sender: await ChatService.getUsername(),
+            sender: await TokenService.getUsername(),
             recipient: username,
             // source: `/user/queue/messages/${username}-user${this.socketSessionId}`,
             source: `/user/queue/messages/${username}`,
@@ -245,7 +246,7 @@ class SupportChat {
         // const url = this.#client.webSocket._transport.url;
         console.log(this.#client.webSocket);
         // this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)(\/websocket)?/)[1];
-        this.username = await ChatService.getUsername()
+        this.username = await TokenService.getUsername()
         // websocket connected means we now have a username
         // so we pass it to the ChatHistory if needed
         if(this.chatHistory.owner === null) {
@@ -276,21 +277,11 @@ class SupportChat {
     async start() {
         try {
             this.chatHistory = await ChatHistory.get();
-            let token = await ChatService.getToken();
+            let token = await TokenService.getToken();
             console.log("Token "+token);
             this.#client = new Client({
                 brokerURL: "ws://localhost:8080/ws?token="+token,
                 // debug: console.log,
-                // Typical usage with SockJS
-                /*webSocketFactory: function () {
-                return new WebSocket("ws://localhost:8080/ws", null, {
-                      headers: {
-                        "Authorization": "Bearer "+token,
-                          "X-Custom": "TRUC"
-                      }
-                    });
-                    // return new SockJS("http://localhost:8080/ws");
-                },*/
                 onConnect: this.websocketConnected.bind(this),
                 onWebSocketClose: this.websocketClosed.bind(this)
             }, console.log);

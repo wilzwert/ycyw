@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+    <title>CHAT POC</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<div th:replace="~{fragments/nav.html}"></div>
+<div class="wrapper">
+  <h1> Login</h1>
+  <form id="formLogin">
+    <label for="username">Username</label><input id="username" type="text" name="username" placeholder="Username">
+    <label for="password">Password</label><input type="password" id="password" placeholder="Password">
+    <button type="submit">Login</button>
+  </form>
+</div>
+<script type="module" src="/js/login.js"></script>
+<div th:replace="~{fragments/bottom.html}"></div>
+</body>
+</html>

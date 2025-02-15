@@ -1,5 +1,7 @@
 "use strict";
 
+import { TokenService} from "./token.js";
+
 export const MESSAGE_TYPE = {
     START: 'START',
     HANDLE: 'HANDLE',
@@ -10,44 +12,6 @@ export const MESSAGE_TYPE = {
     JOIN: 'JOIN',
     PING: 'PING',
     PING_RESPONSE: 'PING_RESPONSE'
-}
-
-export class ChatService {
-    static #username = null;
-    static #token = null;
-
-    static async #load() {
-        // try and get the token and username from localStorage if we can
-        let tokenStr = localStorage.getItem("authToken");
-        let tokenObj, token, username = null;
-        if(tokenStr) {
-            tokenObj = JSON.parse(tokenStr);
-        }
-        else {
-            // or else get one from the API and store it in localStorage
-            const response = await fetch("/api/auth/login", {method: "POST"});
-            if (response.ok) {
-                tokenObj = await response.json();
-                localStorage.setItem("authToken", JSON.stringify(tokenObj));
-            }
-        }
-        ChatService.#token = tokenObj.token;
-        ChatService.#username = tokenObj.username;
-    }
-
-    static async getUsername() {
-        if(ChatService.#username == null) {
-            await ChatService.#load();
-        }
-        return ChatService.#username;
-    }
-
-    static async getToken() {
-        if(ChatService.#token == null) {
-            await ChatService.#load();
-        }
-        return ChatService.#token;
-    }
 }
 
 export class ChatHistory {
@@ -128,7 +92,7 @@ export class ChatHistory {
             if(ChatHistory._INSTANCE.entries && ChatHistory._INSTANCE.entries.length) {
                 // history should be cleared if no user is associated with the http session id
                 // or if user is not the same as the history owner
-                let username = await ChatService.getUsername();
+                let username = await TokenService.getUsername();
                 if(!username || username !== ChatHistory._INSTANCE.owner) {
                     ChatHistory._INSTANCE.clear();
                 }
