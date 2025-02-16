@@ -5,7 +5,6 @@ let token = await TokenService.getToken();
 let role = await TokenService.getRole();
 
 if(token) {
-alert('ouaip');
     let li = document.createElement('li');
     if(role === 'SUPPORT') {
         let a = document.createElement('a');

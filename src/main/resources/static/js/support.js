@@ -106,7 +106,6 @@ class SupportChat {
             client: this.#client,
             sender: await TokenService.getUsername(),
             recipient: username,
-            // source: `/user/queue/messages/${username}-user${this.socketSessionId}`,
             source: `/user/queue/messages/${username}`,
             destination: "/app/private",
             chatHistory: this.chatHistory,
@@ -271,7 +270,7 @@ class SupportChat {
         // if the broker closed the connection, it may indicate a problem with the server
         // or that an authenticated user logged out
         // in that specific case, page should be reloaded to try to reload chat
-        // location.reload();
+        location.reload();
     }
 
     async start() {

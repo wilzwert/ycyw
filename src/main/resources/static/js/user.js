@@ -57,7 +57,6 @@ console.log(chatHistoryEntries);
         });
 
         window.addEventListener("beforeunload", () => {
-            alert('hein');
             console.log(this.client);
             this.client.publish({
                 destination: '/app/support',
@@ -96,7 +95,6 @@ console.log(chatHistoryEntries);
         // if the broker closed the connection, it may indicate a problem with the server
         // or that an authenticated user logged out
         // in that specific case, page should be reloaded to try to reload chat
-        alert('wuuuut');
         location.reload();
     }
 
