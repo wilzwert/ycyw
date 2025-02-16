@@ -57,32 +57,22 @@ export class ChatHistory {
 
     removeConversation(conversationId) {
         if(this.#entries) {
-            let e = this.entries.filter(e => e.conversationId !== conversationId);
-            if(e) {
-                this.save();
-            }
-            /*
-            let index = this.#entries.findIndex(e => e.distantUser === distantUser);
+            console.log(`removing ${conversationId}`);
+            let index = this.#entries.findIndex(e => e.conversationId === conversationId);
             if(index >= 0) {
                 this.#entries.splice(index, 1);
                 this.save();
-            }*/
+            }
         }
     }
 
     removeDistantUser(distantUser) {
         if(this.#entries) {
-            let e = this.entries.filter(e => e.distantUser !== distantUser)
-            /*
             let index = this.#entries.findIndex(e => e.distantUser === distantUser);
             if(index >= 0) {
                 this.#entries.splice(index, 1);
                 this.save();
-            }*/
-            if(e) {
-                this.save();
             }
-
         }
     }
 
@@ -382,7 +372,7 @@ export class Chat {
             }
             // otherwise it defaults to only reloading the page
             else {
-                setTimeout(() => location.reload(), 2000);
+                // setTimeout(() => location.reload(), 2000);
             }
         }
         // otherwise we juste ping again

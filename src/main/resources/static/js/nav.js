@@ -20,7 +20,7 @@ if(token) {
         a.href = "/chat";
         li.appendChild(a);
     }
-    console.log('what', li);
+
     nav.appendChild(li);
 
     if(role !== 'ANONYMOUS') {
