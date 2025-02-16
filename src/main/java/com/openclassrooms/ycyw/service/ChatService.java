@@ -48,8 +48,4 @@ public class ChatService {
     public Map<UUID, ChatUserDto> getWaitingUsers() {
         return waitingUsers;
     }
-
-    public UUID createConversation() {
-        return UUID.randomUUID();
-    }
 }

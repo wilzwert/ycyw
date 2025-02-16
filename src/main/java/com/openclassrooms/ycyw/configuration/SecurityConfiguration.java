@@ -5,11 +5,17 @@ import com.openclassrooms.ycyw.security.jwt.JwtAuthenticationFilter;
 import com.openclassrooms.ycyw.security.service.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -46,15 +52,46 @@ public class SecurityConfiguration {
                 // insert our custom filter, which will authenticate user from token if provided in the request headers
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
+        http.headers((headers) -> {
+          headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable);
+        }); // allow
         return http.build();
     }
 
     /**
-     * Mock users
-     * @return the UserDetailsService
+     * Provide our custom UserDetailsService to the security component
+     * @return UserDetailsService
      */
     @Bean
     public UserDetailsService userDetailsService() {
         return userDetailsService;
+    }
+
+    /**
+     * Use a BCryptPasswordEncode as password encoder
+     * @return BCryptPasswordEncoder
+     */
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(12);
+    }
+
+    /**
+     * Configure the app's AuthenticationProvide with our custom elements
+     * @return AuthenticationProvider
+     */
+    @Bean
+    AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+
+        authProvider.setUserDetailsService(userDetailsService());
+        authProvider.setPasswordEncoder(passwordEncoder());
+
+        return authProvider;
+    }
+
+    @Bean
+    AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+        return configuration.getAuthenticationManager();
     }
 }

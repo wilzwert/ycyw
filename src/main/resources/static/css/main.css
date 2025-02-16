@@ -178,3 +178,10 @@ input[type="text"],input[type="password"], button {
     font-style: italic;
     font-size: 0.8rem;
 }
+
+.chat-close {
+    display: inline-block;
+    position: absolute;
+    top: 0;
+    right: 0;
+}

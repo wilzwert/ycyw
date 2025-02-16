@@ -10,7 +10,7 @@ import lombok.Setter;
 /**
  * Represents a JWT token
  * @author Wilhelm Zwertvaegher
- * Date:07/11/2024
+ * Date:02/16/2025
  * Time:16:20
  */
 @Getter

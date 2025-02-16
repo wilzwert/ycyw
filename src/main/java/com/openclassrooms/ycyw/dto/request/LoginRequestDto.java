@@ -6,7 +6,7 @@ import lombok.Data;
 /**
  * Request DTO used for login request
  * @author Wilhelm Zwertvaegher
- * Date:08/11/2024
+ * Date:02/16/2025
  * Time:14:34
  */
 

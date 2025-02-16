@@ -9,6 +9,7 @@ export const MESSAGE_TYPE = {
     TYPING: 'TYPING',
     STOP_TYPING: 'STOP_TYPING',
     QUIT: 'QUIT',
+    CLOSE: 'CLOSE',
     JOIN: 'JOIN',
     PING: 'PING',
     PING_RESPONSE: 'PING_RESPONSE'
@@ -126,15 +127,18 @@ class ChatUI {
     #typingMessage = null;
     #isTyping = false;
     #typingTimeout = null;
+    #closeLink = null;
 
     #onTyping = () => {};
     #onStopTyping = () => {};
     #onSendMessage = () => {};
+    #onClose = () =>  {};
 
-    constructor({onTyping, onStopTyping, onSendMessage}) {
+    constructor({onTyping, onStopTyping, onSendMessage, onClose}) {
         this.#onTyping = onTyping;
         this.#onStopTyping = onStopTyping;
         this.#onSendMessage = onSendMessage;
+        this.#onClose = onClose;
         this.buildUi();
     }
 
@@ -146,6 +150,7 @@ class ChatUI {
         this.#messageInput.addEventListener('keydown', this.isTyping.bind(this));
         this.#messageInput.addEventListener('blur', this.stopTyping.bind(this));
         this.#messageForm.addEventListener('submit', this.sendMessage.bind(this));
+        this.#closeLink.addEventListener('click', this.close.bind(this));
     }
 
     // build the html and set listeners elements needed
@@ -175,6 +180,12 @@ class ChatUI {
         this.#typingMessage.className = 'display-typing';
         this.#typingMessage.innerHTML = 'User is typing...';
         this.#messagesContainer.appendChild(this.#typingMessage);
+
+        // create container to display "User is typing..." when needed
+        this.#closeLink = document.createElement('a');
+        this.#closeLink.className = 'chat-close';
+        this.#closeLink.innerHTML = 'End chat';
+        this.#messagesContainer.appendChild(this.#closeLink);
 
         // add listeners for form events
         this.createListeners();
@@ -246,6 +257,10 @@ class ChatUI {
         this.addMessage(messageElement);
     }
 
+    close() {
+        this.#onClose();
+    }
+
     // add received message to the messages displayed
     addReceivedMessage(messageContent) {
         const messageElement = document.createElement('div');
@@ -297,12 +312,14 @@ export class Chat {
     #chatHistory = null;
     // callback for ping timeout
     #onPingTimeout = null;
+    // callback when chat is closed (ie is ended manually by a user)
+    #onClose = null;
     // last time data was received
     #lastReceived = null;
     // ChatUi
     #ui = null;
 
-    constructor({client, conversationId, sender, recipient, source, destination, chatHistory, onPingTimeout = null}) {
+    constructor({client, conversationId, sender, recipient, source, destination, chatHistory, onPingTimeout = null, onClose = () => location.reload()}) {
         this.#client = client;
         this.#conversationId = conversationId;
         this.#sender = sender;
@@ -311,13 +328,15 @@ export class Chat {
         this.#destination = destination;
         this.#chatHistory = chatHistory;
         this.#onPingTimeout = onPingTimeout;
+        this.#onClose = onClose;
         this.#lastReceived = Date.now();
 
         // build UI
         this.#ui = new ChatUI({
             onTyping: this.onIsTyping.bind(this),
             onStopTyping: this.onStopTyping.bind(this),
-            onSendMessage: this.onSendMessage.bind(this)
+            onSendMessage: this.onSendMessage.bind(this),
+            onClose: this.onClose.bind(this)
         });
 
         // watches page navigation or closing
@@ -397,6 +416,19 @@ export class Chat {
         }
     }
 
+    onClose() {
+        alert(`Chat with ${this.recipient} has ended ; thank you for chatting !`);
+        this.sendMessage(MESSAGE_TYPE.CLOSE, '' );
+        this.#chatHistory.removeConversation(this.#conversationId);
+        this.#onClose(this);
+    }
+
+    recipientClosed() {
+        alert(`Chat with ${this.recipient} has ended ; thank you for chatting !`);
+        this.#chatHistory.removeConversation(this.#conversationId);
+        this.#onClose(this);
+    }
+
     // restore messages from history
     restoreFromHistory(chatHistoryEntry) {
         console.trace(chatHistoryEntry.messages);
@@ -457,6 +489,9 @@ export class Chat {
                 break;
             case MESSAGE_TYPE.QUIT:
                 this.recipientQuit();
+                break;
+            case MESSAGE_TYPE.CLOSE:
+                this.recipientClosed();
                 break;
             case MESSAGE_TYPE.JOIN:
                 this.recipientJoin();

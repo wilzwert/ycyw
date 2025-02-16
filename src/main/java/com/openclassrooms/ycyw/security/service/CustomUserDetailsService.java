@@ -1,10 +1,12 @@
 package com.openclassrooms.ycyw.security.service;
 
 
+import com.openclassrooms.ycyw.model.User;
+import com.openclassrooms.ycyw.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 /**
@@ -12,35 +14,27 @@ import org.springframework.stereotype.Service;
  * As of now, the jwt token subject is the user's id
  *
  * @author Wilhelm Zwertvaegher
- * Date:07/11/2024
+ * Date:02/16/2025
  * Time:15:58
  */
 @Service
 @Slf4j
-public class CustomUserDetailsService extends InMemoryUserDetailsManager {
+public class CustomUserDetailsService implements UserDetailsService {
 
-    public CustomUserDetailsService() {
-        super();
+    private final UserRepository userRepository;
 
-        UserDetails user = User.builder()
-                .username("support")
-                .password("password")
-                .roles("SUPPORT")
+    public CustomUserDetailsService(final UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException, NumberFormatException {
+        User foundUser = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException(username));
+        return org.springframework.security.core.userdetails.User.builder()
+                .username(foundUser.getUsername())
+                .password(foundUser.getPassword())
+                .roles(foundUser.getRole())
                 .build();
-
-        UserDetails user2 = User.builder()
-                .username("agent")
-                .password("password")
-                .roles("SUPPORT")
-                .build();
-
-        UserDetails user3 = User.builder()
-                .username("client")
-                .password("password")
-                .roles("USER")
-                .build();
-        super.createUser(user);
-        super.createUser(user2);
-        super.createUser(user3);
     }
 }

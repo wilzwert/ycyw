@@ -3,15 +3,13 @@ package com.openclassrooms.ycyw.controller;
 import com.openclassrooms.ycyw.security.service.JwtService;
 import com.openclassrooms.ycyw.dto.request.LoginRequestDto;
 import com.openclassrooms.ycyw.dto.response.JwtResponse;
-import com.openclassrooms.ycyw.service.UsernameGeneratorService;
+import com.openclassrooms.ycyw.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,7 +23,7 @@ import java.util.Collection;
 /**
  * Auth-related REST controller
  * @author Wilhelm Zwertvaegher
- * Date:07/11/2024
+ * Date:02/03/2025
  * Time:15:51
  *
  */
@@ -35,14 +33,12 @@ import java.util.Collection;
 @RequestMapping("/api/auth")
 
 public class AuthController {
-    private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
-    private final UsernameGeneratorService usernameGeneratorService;
+    private final UserService userService;
 
-    public AuthController(UserDetailsService userDetailsService, JwtService jwtService, UsernameGeneratorService usernameGeneratorService) {
-        this.userDetailsService = userDetailsService;
+    public AuthController(JwtService jwtService,UserService userService) {
         this.jwtService = jwtService;
-        this.usernameGeneratorService = usernameGeneratorService;
+        this.userService = userService;
     }
 
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -70,15 +66,9 @@ public class AuthController {
                     username = authentication.getName();
                 }
                 else {
-                    log.info("User login with username {}", loginRequestDto.getUsername());
-                    log.info("User login - authenticating");
-                    UserDetails user = userDetailsService.loadUserByUsername(loginRequestDto.getUsername());
-                    log.info("User login - generating token {} {}", user.getPassword(), loginRequestDto.getPassword());
-                    if (!loginRequestDto.getPassword().equals(user.getPassword())) {
-                        throw new BadCredentialsException("Wrong password");
-                    }
-                    username = user.getUsername();
-                    authorities = user.getAuthorities();
+                    authentication = this.userService.authenticateUser(loginRequestDto.getUsername(), loginRequestDto.getPassword());
+                    username = loginRequestDto.getUsername();
+                    authorities = authentication.getAuthorities();
                     log.info("User with username {} successfully authenticated, sending JWT token", loginRequestDto.getUsername());
                 }
             }
@@ -90,7 +80,7 @@ public class AuthController {
             // no username/password and not authenticated : generate anonoymous username
             else {
                 authType = "anonymous";
-                username = this.usernameGeneratorService.generateUsername();
+                username = this.userService.generateUsername();
             }
         }
         catch (AuthenticationException e) {
