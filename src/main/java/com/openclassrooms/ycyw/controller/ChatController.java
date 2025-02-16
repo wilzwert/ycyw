@@ -42,6 +42,7 @@ public class ChatController {
     public void sendSupportMessage(@Payload ChatMessage message, Principal principal) {
 
         ChatMessage result;
+        // TODO implement strategy pattern to improve code readability and maintainability
         switch (message.type()) {
             case HANDLE :
                 this.chatService.removeWaitingUser(message.conversationId());
@@ -52,7 +53,6 @@ public class ChatController {
                 messagingTemplate.convertAndSend("/topic/support", result);
                 break;
             case START:
-
                 // at first, we create a conversation
                 // but if another START command arrives, we first check if the user is already waiting
                 // in that case we reuse the previously created conversation
@@ -79,6 +79,15 @@ public class ChatController {
                 result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.QUIT, "User has left the chat.", message.conversationId());
                 // let all support users know
                 messagingTemplate.convertAndSend("/topic/support", result);
+                break;
+            case CLOSE:
+                // remove user from queue
+                this.chatService.removeWaitingUser(message.conversationId());
+                // TODO : when Conversation will be persisted, consider it ended
+                // send CLOSE message to distant user
+                result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.CLOSE, "", message.conversationId());
+                // let the user know
+                messagingTemplate.convertAndSendToUser(message.recipient(), "/queue/messages/"+message.conversationId(), result);
                 break;
         }
     }
