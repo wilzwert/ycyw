@@ -33,11 +33,23 @@ public class ChatService {
         waitingUsers.remove(conversationId);
     }
 
+    public Optional<ChatUserDto> getWaitingUser(String username) {
+        return waitingUsers.entrySet()
+                .stream()
+                .filter((Map.Entry<UUID, ChatUserDto> s) -> s.getValue().username().equals(username))
+                .findFirst()
+                .map(Map.Entry::getValue);
+    }
+
     /**
      *
      * @return the map of users waiting to be handled by support
      */
     public Map<UUID, ChatUserDto> getWaitingUsers() {
         return waitingUsers;
+    }
+
+    public UUID createConversation() {
+        return UUID.randomUUID();
     }
 }

@@ -12,7 +12,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RestController;
 import java.security.Principal;
-import java.util.UUID;
+import java.util.Optional;
 
 /**
  * @author Wilhelm Zwertvaegher
@@ -52,19 +52,27 @@ public class ChatController {
                 messagingTemplate.convertAndSend("/topic/support", result);
                 break;
             case START:
+
+                // at first, we create a conversation
+                // but if another START command arrives, we first check if the user is already waiting
+                // in that case we reuse the previously created conversation
                 // TODO : conversation should be persisted
                 // we should persist the conversation on START command even if Conversations not handled may be "empty"
                 // but in the long term it may actually be helpful to identify empty conversations and when they occur
-                UUID conversationId = UUID.randomUUID();
+                Optional<ChatUserDto> userDtoOptional = this.chatService.getWaitingUser(principal.getName())
+                        .or(() -> Optional.of(new ChatUserDto(principal.getName(), this.chatService.createConversation())));
+
+                ChatUserDto userDto = userDtoOptional.get();
 
                 System.out.println("User sent START");
                 // add username to waiting users list
                 System.out.println(principal);
-                chatService.addWaitingUser(new ChatUserDto(principal.getName(), conversationId));
+                chatService.addWaitingUser(userDto);
 
                 // broadcast start message to support
-                result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.START, "", conversationId);
+                result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.START, "", userDto.conversationId());
                 messagingTemplate.convertAndSend("/topic/support", result);
+
                 break;
             case QUIT:
                 this.chatService.removeWaitingUser(message.conversationId());
@@ -82,7 +90,6 @@ public class ChatController {
     @MessageMapping("/handle")
     @SendTo("/topic/support")
     public ChatMessage sendHandleMessage(@Payload ChatMessage message, Principal principal) {
-        // FIXME : it does not really make sense to consider that the user is the recipient
         return new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.HANDLE, "", message.conversationId());
     }
 
