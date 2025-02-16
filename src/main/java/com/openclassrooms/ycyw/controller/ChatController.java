@@ -1,6 +1,7 @@
 package com.openclassrooms.ycyw.controller;
 
 
+import com.openclassrooms.ycyw.dto.ChatUserDto;
 import com.openclassrooms.ycyw.model.ChatMessage;
 import com.openclassrooms.ycyw.model.ChatMessageType;
 import com.openclassrooms.ycyw.service.ChatService;
@@ -11,6 +12,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RestController;
 import java.security.Principal;
+import java.util.UUID;
 
 /**
  * @author Wilhelm Zwertvaegher
@@ -42,25 +44,31 @@ public class ChatController {
         ChatMessage result;
         switch (message.type()) {
             case HANDLE :
-                this.chatService.removeWaitingUser(message.recipient());
-                result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.HANDLE, "");
+                this.chatService.removeWaitingUser(message.conversationId());
+                result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.HANDLE, "", message.conversationId());
                 // let the user know
                 messagingTemplate.convertAndSendToUser(message.recipient(), "/queue/messages", result);
                 // let all support users know
                 messagingTemplate.convertAndSend("/topic/support", result);
                 break;
             case START:
+                // TODO : conversation should be persisted
+                // we should persist the conversation on START command even if Conversations not handled may be "empty"
+                // but in the long term it may actually be helpful to identify empty conversations and when they occur
+                UUID conversationId = UUID.randomUUID();
+
                 System.out.println("User sent START");
                 // add username to waiting users list
-                chatService.addWaitingUser(principal.getName());
+                System.out.println(principal);
+                chatService.addWaitingUser(new ChatUserDto(principal.getName(), conversationId));
 
                 // broadcast start message to support
-                result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.START, "");
+                result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.START, "", conversationId);
                 messagingTemplate.convertAndSend("/topic/support", result);
                 break;
             case QUIT:
-                this.chatService.removeWaitingUser(principal.getName());
-                result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.QUIT, "User has left the chat.");
+                this.chatService.removeWaitingUser(message.conversationId());
+                result = new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.QUIT, "User has left the chat.", message.conversationId());
                 // let all support users know
                 messagingTemplate.convertAndSend("/topic/support", result);
                 break;
@@ -75,7 +83,7 @@ public class ChatController {
     @SendTo("/topic/support")
     public ChatMessage sendHandleMessage(@Payload ChatMessage message, Principal principal) {
         // FIXME : it does not really make sense to consider that the user is the recipient
-        return new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.HANDLE, "");
+        return new ChatMessage(principal.getName(), message.recipient(), ChatMessageType.HANDLE, "", message.conversationId());
     }
 
     /**
@@ -87,8 +95,8 @@ public class ChatController {
     @MessageMapping("/private")
     public void sendPrivateMessage(@Payload ChatMessage message, Principal principal) {
         if(message.recipient() != null) {
-            ChatMessage result = new ChatMessage(principal.getName(), message.recipient(), message.type(), message.content());
-            messagingTemplate.convertAndSendToUser(message.recipient(), "/queue/messages/"+principal.getName(), result);
+            ChatMessage result = new ChatMessage(principal.getName(), message.recipient(), message.type(), message.content(), message.conversationId());
+            messagingTemplate.convertAndSendToUser(message.recipient(), "/queue/messages/"+message.conversationId(), result);
         }
     }
 }

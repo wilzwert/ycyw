@@ -1,6 +1,7 @@
 package com.openclassrooms.ycyw.service;
 
 
+import com.openclassrooms.ycyw.dto.ChatUserDto;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -14,29 +15,29 @@ import java.util.*;
 @Service
 public class ChatService {
     // store waiting usernames to allow retrieval
-    private final HashSet<String> waitingUsers = new HashSet<>();
+    private final HashMap<UUID, ChatUserDto> waitingUsers = new HashMap<>();
 
     /**
      * Adds a username to the list of users waiting to be handled by support
-     * @param username the username of the chat user
+     * @param user the chat user
      */
-    public void addWaitingUser(String username) {
-        waitingUsers.add(username);
+    public void addWaitingUser(ChatUserDto user) {
+        waitingUsers.put(user.conversationId(), user);
     }
 
     /**
      * Removes a username to the list of users waiting to be handled by support
-     * @param username the username of the chat user
+     * @param conversationId the id of the conversation
      */
-    public void removeWaitingUser(String username) {
-        waitingUsers.remove(username);
+    public void removeWaitingUser(UUID conversationId) {
+        waitingUsers.remove(conversationId);
     }
 
     /**
      *
-     * @return the set of users waiting to be handled by support
+     * @return the map of users waiting to be handled by support
      */
-    public Set<String> getWaitingUsers() {
+    public Map<UUID, ChatUserDto> getWaitingUsers() {
         return waitingUsers;
     }
 }

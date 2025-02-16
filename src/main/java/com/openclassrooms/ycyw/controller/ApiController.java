@@ -1,9 +1,9 @@
 package com.openclassrooms.ycyw.controller;
 
 
+import com.openclassrooms.ycyw.dto.ChatUserDto;
 import com.openclassrooms.ycyw.service.ChatService;
 import org.springframework.http.MediaType;
-import org.springframework.messaging.simp.user.SimpUser;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,11 +37,11 @@ public class ApiController {
      */
     @GetMapping(value= "/api/chat/users", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('SUPPORT')")
-    public List<String> getUsers(@RequestParam(required = false, defaultValue = "", value="filter") String filter) {
+    public List<ChatUserDto> getUsers(@RequestParam(required = false, defaultValue = "", value="filter") String filter) {
         if(filter.equals("waiting")) {
-            return this.chatService.getWaitingUsers().stream().toList();
+            return this.chatService.getWaitingUsers().values().stream().toList();
         }
 
-        return this.userRegistry.getUsers().stream().map(SimpUser::getName).toList();
+        return this.userRegistry.getUsers().stream().map(u -> new ChatUserDto(u.getName(), null)).toList();
     }
 }

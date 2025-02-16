@@ -40,29 +40,49 @@ export class ChatHistory {
         localStorage.setItem("chatHistory", JSON.stringify({owner: this.#owner, entries: this.#entries}));
     }
 
-    addMessage(user, messageObject) {
+    addMessage(conversationId, distantUser, messageObject) {
         // find entry for the user
         if(!this.#entries) {
             this.#entries = [];
         }
 
-        let entry = this.#entries.find(e => e.user === user);
+        let entry = this.#entries.find(e => e.distantUser === distantUser);
         if(!entry) {
-            entry = {user: user, messages: []};
+            entry = {conversationId: conversationId, distantUser: distantUser, messages: []};
             this.#entries.push(entry);
         }
         entry.messages.push(messageObject);
         this.save();
     }
 
-    removeUser(user) {
+    removeConversation(conversationId) {
         if(this.#entries) {
-            // this.entries = this.entries.filter(e => e.user !== user);
-            let index = this.#entries.findIndex(e => e.user === user);
+            let e = this.entries.filter(e => e.conversationId !== conversationId);
+            if(e) {
+                this.save();
+            }
+            /*
+            let index = this.#entries.findIndex(e => e.distantUser === distantUser);
             if(index >= 0) {
                 this.#entries.splice(index, 1);
                 this.save();
+            }*/
+        }
+    }
+
+    removeDistantUser(distantUser) {
+        if(this.#entries) {
+            let e = this.entries.filter(e => e.distantUser !== distantUser)
+            /*
+            let index = this.#entries.findIndex(e => e.distantUser === distantUser);
+            if(index >= 0) {
+                this.#entries.splice(index, 1);
+                this.save();
+            }*/
+            if(e) {
+                this.save();
             }
+
         }
     }
 
@@ -90,7 +110,7 @@ export class ChatHistory {
             ChatHistory._INSTANCE = new ChatHistory(entries, owner);
 
             if(ChatHistory._INSTANCE.entries && ChatHistory._INSTANCE.entries.length) {
-                // history should be cleared if no user is associated with the http session id
+                // history should be cleared if no user is associated with the current token
                 // or if user is not the same as the history owner
                 let username = await TokenService.getUsername();
                 if(!username || username !== ChatHistory._INSTANCE.owner) {
@@ -273,6 +293,8 @@ export class Chat {
     static PING_DELAY = 2;
     // WS client
     #client = null;
+    // conversation UUID
+    #conversationId = null;
     // username
     #sender = null;
     // recipient
@@ -290,8 +312,9 @@ export class Chat {
     // ChatUi
     #ui = null;
 
-    constructor({client, sender, recipient, source, destination, chatHistory, onPingTimeout = null}) {
+    constructor({client, conversationId, sender, recipient, source, destination, chatHistory, onPingTimeout = null}) {
         this.#client = client;
+        this.#conversationId = conversationId;
         this.#sender = sender;
         this.#recipient = recipient;
         this.#source = source;
@@ -317,6 +340,10 @@ export class Chat {
 
     get recipient() {
         return this.#recipient;
+    }
+
+    get conversationId() {
+        return this.#conversationId;
     }
 
     watchUnload() {
@@ -347,7 +374,8 @@ export class Chat {
         // nothing happened
         if(delay > Chat.TIMEOUT) {
             this.userInactive();
-            this.#chatHistory.removeUser(this.#recipient);
+            // OLD this.#chatHistory.removeDistantUser(this.#recipient);
+            this.#chatHistory.removeConversation(this.#conversationId);
             // if specific callback provided we call it
             if(this.#onPingTimeout) {
                 this.#onPingTimeout(this);
@@ -381,7 +409,9 @@ export class Chat {
 
     // restore messages from history
     restoreFromHistory(chatHistoryEntry) {
+        console.trace(chatHistoryEntry.messages);
         chatHistoryEntry.messages.forEach(messageObject => {
+            console.log(messageObject);
             if(messageObject.sender === this.#sender) {
                 this.#ui.addSentMessage(messageObject.content);
             }
@@ -427,7 +457,7 @@ export class Chat {
         switch(messageObject.type) {
             case MESSAGE_TYPE.MESSAGE:
                 this.#ui.addReceivedMessage(messageObject.content);
-                this.#chatHistory.addMessage(this.#recipient, messageObject);
+                this.#chatHistory.addMessage(this.#conversationId, this.#recipient, messageObject);
                 break;
             case MESSAGE_TYPE.TYPING:
                 this.recipientIsTyping();
@@ -455,7 +485,7 @@ export class Chat {
 
     // send a message
     sendMessage(messageType, content) {
-        const messageObject = { sender: this.#sender, recipient: this.#recipient, type: messageType, content: content};
+        const messageObject = { sender: this.#sender, recipient: this.#recipient, type: messageType, content: content, conversationId: this.#conversationId};
         console.log(messageObject);
         this.#client.publish({
             destination: this.#destination,
@@ -463,7 +493,7 @@ export class Chat {
         });
         if(messageType === MESSAGE_TYPE.MESSAGE) {
             this.#ui.addSentMessage(content);
-            this.#chatHistory.addMessage(this.#recipient, messageObject);
+            this.#chatHistory.addMessage(this.#conversationId, this.#recipient, messageObject);
         }
     }
 

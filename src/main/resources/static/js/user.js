@@ -9,16 +9,18 @@ class UserChat {
     chatHistory = null;
     client = null;
     username = null;
+    conversationId = null;
 
     constructor() {
     }
 
-    displayChat(username, chatHistoryEntry = null) {
+    displayChat(conversationId, username, chatHistoryEntry = null) {
         const chat = new Chat({
             sender: this.username,
+            conversationId: conversationId,
             client: this.client,
             recipient: username,
-            source: `/user/queue/messages/${username}`,
+            source: `/user/queue/messages/${conversationId}`,
             destination: '/app/private',
             chatHistory: this.chatHistory
         });
@@ -33,13 +35,13 @@ class UserChat {
     // Restore previous interrupted chat if possible
     async restoreChat() {
         let chatHistoryEntries = this.chatHistory.entries;
-console.log(chatHistoryEntries);
+
         // from the user point of view, there is one and only one chat with a support agent
         if(chatHistoryEntries == null || !Array.isArray(chatHistoryEntries) ||  chatHistoryEntries.length !== 1) {
             return false;
         }
         let chatHistoryEntry = chatHistoryEntries[0];
-        this.displayChat(chatHistoryEntry.user, chatHistoryEntry);
+        this.displayChat(chatHistoryEntry.conversationId, chatHistoryEntry.distantUser, chatHistoryEntry);
     }
 
     async startChat() {
@@ -47,7 +49,8 @@ console.log(chatHistoryEntries);
         this.client.subscribe(`/user/queue/messages`, (message) => {
             let messageObject = JSON.parse(message.body);
             if(messageObject.type === MESSAGE_TYPE.HANDLE) {
-                this.displayChat(messageObject.sender);
+                this.conversationId = messageObject.conversationId;
+                this.displayChat(messageObject.conversationId, messageObject.sender);
             }
         });
 
@@ -60,7 +63,7 @@ console.log(chatHistoryEntries);
             console.log(this.client);
             this.client.publish({
                 destination: '/app/support',
-                body: JSON.stringify({ sender: this.username, recipient: 'support', type: MESSAGE_TYPE.QUIT, content: ''})
+                body: JSON.stringify({ sender: this.username, recipient: 'support', type: MESSAGE_TYPE.QUIT, content: '', conversationId: this.conversationId})
             });
         });
 

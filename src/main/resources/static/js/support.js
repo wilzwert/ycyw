@@ -1,5 +1,5 @@
 import {MESSAGE_TYPE, Chat, ChatHistory} from './chat.js';
-import { TokenService} from "./token";
+import { TokenService} from "./token.js";
 import { Client } from '@stomp/stompjs';
 
 /**
@@ -7,19 +7,22 @@ import { Client } from '@stomp/stompjs';
  */
 class WaitingUser {
     username = null;
+    conversationId = null;
     callback = null;
     htmlElement = null;
 
-    constructor(username, callback) {
+    constructor(conversationId, username, callback) {
+        this.conversationId = conversationId;
         this.username = username;
         this.callback = callback;
 
         this.htmlElement = document.createElement('div');
+        this.htmlElement.setAttribute('data-conversation-id', conversationId);
         this.htmlElement.className = 'user';
         this.htmlElement.innerHTML = `<span class="username">${username}</span>`;
         this.htmlElement.addEventListener('click', e => {
             e.preventDefault();
-            callback(username);
+            callback(conversationId, username);
         });
     }
 
@@ -33,18 +36,21 @@ class WaitingUser {
  */
 class ChatUser {
 
+    conversationId = null;
     username = null;
     callback = null;
     htmlElement = null;
 
-    constructor(username, callback) {
+    constructor(conversationId, username, callback) {
+        this.conversationId = conversationId;
         this.username = username;
         this.callback = callback;
 
         this.htmlElement = document.createElement('div');
+        this.htmlElement.setAttribute('data-conversation-id', conversationId);
         this.htmlElement.className = 'user';
         this.htmlElement.innerHTML = `<span class="username">${username}</span><span class="messages-count"></span>`;
-        this.htmlElement.addEventListener('click', e => {e.preventDefault(); callback(username)});
+        this.htmlElement.addEventListener('click', e => {e.preventDefault(); callback(conversationId, username)});
     }
 
     get element() {
@@ -65,13 +71,13 @@ class SupportChat {
     constructor() {
     }
 
-    displayChat(username) {
-        if(this.#currentChat !== username) {
-            this.#currentChat = username;
+    displayChat(conversationId) {
+        if(this.#currentChat !== conversationId) {
+            this.#currentChat = conversationId;
             this.#chatsContainer.innerHTML = '';
-            this.#chatsContainer.appendChild(this.#chats[username].element);
+            this.#chatsContainer.appendChild(this.#chats[conversationId].element);
             this.#handledContainer.childNodes.forEach(userContainer => {
-                userContainer.className = 'user '+(userContainer.firstChild.innerHTML === username ? ' active' : '')
+                userContainer.className = 'user '+(userContainer.getAttribute('data-conversation-id') === conversationId ? ' active' : '')
                 // reset displayed new messages count
                 userContainer.childNodes[1].innerHTML = '';
             });
@@ -80,9 +86,10 @@ class SupportChat {
 
     removeChat(chat) {
         let username = chat.recipient;
+        let conversationId = chat.conversationId;
         // remove chat container
-        if(typeof this.#chats[username] != 'undefined') {
-            delete(this.#chats[username]);
+        if(typeof this.#chats[conversationId] != 'undefined') {
+            delete(this.#chats[conversationId]);
 
             // remove user container
             let handled = Array.from(this.#handledContainer.childNodes).find(e => e.firstChild.innerHTML === username);
@@ -91,33 +98,34 @@ class SupportChat {
             }
 
             // set active chat if needed and possible
-            if(this.#currentChat === username) {
+            if(this.#currentChat === conversationId) {
                 this.#currentChat = null;
                 this.#chatsContainer.innerHTML = '';
                 if(this.#handledContainer.childNodes.length) {
-                    this.displayChat(this.#handledContainer.childNodes[0].firstChild.innerHTML);
+                    this.displayChat(this.#handledContainer.childNodes[0].getAttribute('data-conversation-id'));
                 }
             }
         }
     }
 
-    async createChat(username, chatHistoryEntry = null) {
-        this.#chats[username] = new Chat({
+    async createChat(conversationId, username, chatHistoryEntry = null) {
+        this.#chats[conversationId] = new Chat({
             client: this.#client,
+            conversationId: conversationId,
             sender: await TokenService.getUsername(),
             recipient: username,
-            source: `/user/queue/messages/${username}`,
+            source: `/user/queue/messages/${conversationId}`,
             destination: "/app/private",
             chatHistory: this.chatHistory,
             onPingTimeout: this.removeChat.bind(this)
         });
         if(chatHistoryEntry) {
-            this.#chats[username].restoreFromHistory(chatHistoryEntry);
+            this.#chats[conversationId].restoreFromHistory(chatHistoryEntry);
         }
 
-        const user = new ChatUser(username, this.displayChat.bind(this));
+        const user = new ChatUser(conversationId, username, this.displayChat.bind(this));
         this.#handledContainer.appendChild(user.element);
-        this.displayChat(username);
+        this.displayChat(conversationId);
 
         this.#client.subscribe(
             // `/user/queue/messages/${username}-user${this.socketSessionId}`,
@@ -127,36 +135,36 @@ class SupportChat {
     }
 
     // support user wants to handle chat with username
-    handleUser(username) {
+    handleUser(conversationId, username) {
         // broadcast the handle message
         this.#client.publish({
             destination: '/app/support',
             body: JSON.stringify({
-                // sender: this.socketSessionId,
                 sender: this.username,
                 recipient: username,
                 type: MESSAGE_TYPE.HANDLE,
-                content: username
+                content: username,
+                conversationId: conversationId
             })
         });
         // display chat for the user
-        this.createChat(username);
+        this.createChat(conversationId, username);
     }
 
     // display new waiting user
-    addWaitingUser(username) {
-        if (typeof this.#chats[username] == "undefined" && typeof this.#waitingUsers[username] == "undefined") {
-            this.#waitingUsers[username] = new WaitingUser(username, this.handleUser.bind(this));
-            this.#waitingContainer.appendChild(this.#waitingUsers[username].element);
+    addWaitingUser(conversationId, username) {
+        if (typeof this.#chats[conversationId] == "undefined" && typeof this.#waitingUsers[conversationId] == "undefined") {
+            this.#waitingUsers[conversationId] = new WaitingUser(conversationId, username, this.handleUser.bind(this));
+            this.#waitingContainer.appendChild(this.#waitingUsers[conversationId].element);
         }
     }
 
     // remove user from waiting users list
-    removeWaitingUser(username) {
-        if(typeof this.#waitingUsers[username] != "undefined") {
-            let element = this.#waitingUsers[username].element;
+    removeWaitingUser(conversationId) {
+        if(typeof this.#waitingUsers[conversationId] != "undefined") {
+            let element = this.#waitingUsers[conversationId].element;
             element.parentNode.removeChild(element);
-            delete this.#waitingUsers[username];
+            delete this.#waitingUsers[conversationId];
         }
     }
 
@@ -167,16 +175,15 @@ class SupportChat {
         switch(messageObject.type) {
             // new user has arrived and waits to be handled by someone from support
             case MESSAGE_TYPE.START :
-                    this.addWaitingUser(messageObject.sender)
+                    this.addWaitingUser(messageObject.conversationId, messageObject.sender)
                 break;
             // a user has quit before they have been handled by someone from support
             case MESSAGE_TYPE.QUIT :
-                this.removeWaitingUser(messageObject.sender)
+                this.removeWaitingUser(messageObject.conversationId)
                 break;
             // a waiting user is handled by a support agent
             case MESSAGE_TYPE.HANDLE :
-                // FIXME : it does not really make sense to consider that the user is the recipient
-                this.removeWaitingUser(messageObject.recipient);
+                this.removeWaitingUser(messageObject.conversationId);
                 break;
             default: break;
         }
@@ -186,8 +193,9 @@ class SupportChat {
     handleUserMessage(message) {
         const messageObject = JSON.parse(message.body);
 
-        if(messageObject.type === MESSAGE_TYPE.MESSAGE && messageObject.sender !== this.#currentChat) {
-            let user = this.#handledContainer.childNodes.values().find(u => u.firstChild.innerHTML === messageObject.sender);
+        if(messageObject.type === MESSAGE_TYPE.MESSAGE && messageObject.conversationId !== this.#currentChat) {
+            console.log('message from other conversation');
+            let user = this.#handledContainer.childNodes.values().find(u => u.getAttribute('data-conversation-id') === messageObject.conversationId);
             let count = user.childNodes[1].innerHTML === '' ? 0 : parseInt(user.childNodes[1].innerHTML);
             count++;
             user.childNodes[1].innerHTML = count;
@@ -196,15 +204,18 @@ class SupportChat {
 
     // Restore previous interrupted chat(s) if possible
     async restoreFromHistory() {
-        let chatHistoryEntries = this.chatHistory.entries;
 
+        let chatHistoryEntries = this.chatHistory.entries;
+        console.log(chatHistoryEntries);
         // no entries mean there is nothing we can restore
         if(chatHistoryEntries == null || !Array.isArray(chatHistoryEntries)) {
             return false;
         }
 
         chatHistoryEntries.forEach(chatHistoryEntry => {
-            this.createChat(chatHistoryEntry.user, chatHistoryEntry);
+            if(chatHistoryEntry !== null) {
+                this.createChat(chatHistoryEntry.conversationId, chatHistoryEntry.distantUser, chatHistoryEntry);
+            }
         });
     }
 
@@ -212,7 +223,8 @@ class SupportChat {
     restoreWaitingUsers() {
         fetch("/api/chat/users?filter=waiting").then(r => r.json().then(json => {
            if(Array.isArray(json)) {
-               json.forEach(u => this.addWaitingUser(u));
+               console.log(json);
+               json.forEach(u => this.addWaitingUser(u.conversationId, u.username));
            }
         }));
     }
@@ -240,10 +252,7 @@ class SupportChat {
     }
 
     // called when websocket is connected
-    async websocketConnected(ifr) {
-        console.log(ifr);
-        // const url = this.#client.webSocket._transport.url;
-        console.log(this.#client.webSocket);
+    async websocketConnected() {
         // this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)(\/websocket)?/)[1];
         this.username = await TokenService.getUsername()
         // websocket connected means we now have a username

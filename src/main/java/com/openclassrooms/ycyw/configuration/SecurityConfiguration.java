@@ -34,8 +34,8 @@ public class SecurityConfiguration {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/support").hasRole("SUPPORT")
-                        .requestMatchers("/js/support.js").hasRole("SUPPORT")
+                        // .requestMatchers("/support").hasRole("SUPPORT")
+                        // .requestMatchers("/js/support.js").hasRole("SUPPORT")
                         .anyRequest().permitAll() // Le reste est public
                 )
                 // .formLogin(withDefaults()) // Form Login
