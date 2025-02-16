@@ -1,6 +1,7 @@
 package com.openclassrooms.ycyw.security.service;
 
 import com.openclassrooms.ycyw.model.JwtToken;
+import com.openclassrooms.ycyw.security.AuthenticationType;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -93,7 +94,7 @@ public class JwtService {
      * @param username the username we want to generate the token for
      * @return the JWT Token
      */
-    public String generateToken(String username, String authType) {
+    public String generateToken(String username, AuthenticationType authType) {
         log.info("Generating JWT token for user {}", username);
         return Jwts
                 .builder()

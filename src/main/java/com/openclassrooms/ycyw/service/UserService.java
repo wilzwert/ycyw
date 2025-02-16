@@ -8,6 +8,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -44,6 +45,15 @@ public class UserService {
 
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(user.get().getUsername(), password)
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        return authentication;
+    }
+
+    public Authentication authenticateAnonymously() throws AuthenticationException {
+        UserDetails userDetails = org.springframework.security.core.userdetails.User.builder().roles("ANONYMOUS").username(this.generateUsername()).password("").build();
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(userDetails.getUsername(), userDetails.getPassword())
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
         return authentication;
