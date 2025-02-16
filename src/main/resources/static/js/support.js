@@ -122,6 +122,9 @@ class SupportChat {
         if(chatHistoryEntry) {
             this.#chats[conversationId].restoreFromHistory(chatHistoryEntry);
         }
+        else {
+            this.chatHistory.createEntry(conversationId, username);
+        }
 
         const user = new ChatUser(conversationId, username, this.displayChat.bind(this));
         this.#handledContainer.appendChild(user.element);

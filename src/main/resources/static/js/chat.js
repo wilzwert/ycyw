@@ -41,13 +41,26 @@ export class ChatHistory {
         localStorage.setItem("chatHistory", JSON.stringify({owner: this.#owner, entries: this.#entries}));
     }
 
+    createEntry(conversationId, distantUser) {
+        if(!this.#entries) {
+            this.#entries = [];
+        }
+
+        let entry = this.#entries.find(e => e.conversationId === conversationId);
+        if(!entry) {
+            entry = {conversationId: conversationId, distantUser: distantUser, messages: []};
+            this.#entries.push(entry);
+            this.save();
+        }
+    }
+
     addMessage(conversationId, distantUser, messageObject) {
         // find entry for the user
         if(!this.#entries) {
             this.#entries = [];
         }
 
-        let entry = this.#entries.find(e => e.distantUser === distantUser);
+        let entry = this.#entries.find(e => e.conversationId === conversationId);
         if(!entry) {
             entry = {conversationId: conversationId, distantUser: distantUser, messages: []};
             this.#entries.push(entry);
@@ -60,16 +73,6 @@ export class ChatHistory {
         if(this.#entries) {
             console.log(`removing ${conversationId}`);
             let index = this.#entries.findIndex(e => e.conversationId === conversationId);
-            if(index >= 0) {
-                this.#entries.splice(index, 1);
-                this.save();
-            }
-        }
-    }
-
-    removeDistantUser(distantUser) {
-        if(this.#entries) {
-            let index = this.#entries.findIndex(e => e.distantUser === distantUser);
             if(index >= 0) {
                 this.#entries.splice(index, 1);
                 this.save();

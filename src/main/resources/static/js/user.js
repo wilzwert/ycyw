@@ -28,6 +28,9 @@ class UserChat {
         if(chatHistoryEntry) {
             chat.restoreFromHistory(chatHistoryEntry);
         }
+        else {
+            this.chatHistory.createEntry(conversationId, username);
+        }
         this.wrapper.innerHTML = '';
         this.wrapper.appendChild(chat.element);
     }
