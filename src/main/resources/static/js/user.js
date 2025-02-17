@@ -22,7 +22,8 @@ class UserChat {
             recipient: username,
             source: `/user/queue/messages/${conversationId}`,
             destination: '/app/private',
-            chatHistory: this.chatHistory
+            chatHistory: this.chatHistory,
+            onClose: () => location.href = "/"
         });
 
         if(chatHistoryEntry) {
@@ -101,7 +102,7 @@ class UserChat {
         // if the broker closed the connection, it may indicate a problem with the server
         // or that an authenticated user logged out
         // in that specific case, page should be reloaded to try to reload chat
-        location.reload();
+        // location.reload();
     }
 
 

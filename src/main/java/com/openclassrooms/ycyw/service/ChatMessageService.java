@@ -1,19 +1,8 @@
 package com.openclassrooms.ycyw.service;
 
 import com.openclassrooms.ycyw.model.ChatMessage;
-import com.openclassrooms.ycyw.repository.ChatMessageRepository;
-import org.springframework.stereotype.Service;
 
-@Service
-public class ChatMessageService {
+public interface ChatMessageService {
 
-    private final ChatMessageRepository chatMessageRepository;
-
-    public ChatMessageService(final ChatMessageRepository chatMessageRepository) {
-        this.chatMessageRepository = chatMessageRepository;
-    }
-
-    public ChatMessage createChatMessage(ChatMessage chatMessage) {
-        return this.chatMessageRepository.save(chatMessage);
-    }
+    ChatMessage createChatMessage(ChatMessage chatMessage);
 }

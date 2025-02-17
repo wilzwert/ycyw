@@ -1,7 +1,6 @@
 package com.openclassrooms.ycyw.configuration;
 
 
-import com.openclassrooms.ycyw.service.ChatService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.security.core.Authentication;

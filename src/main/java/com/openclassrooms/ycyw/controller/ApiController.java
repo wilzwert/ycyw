@@ -2,7 +2,7 @@ package com.openclassrooms.ycyw.controller;
 
 
 import com.openclassrooms.ycyw.dto.ChatUserDto;
-import com.openclassrooms.ycyw.service.ChatService;
+import com.openclassrooms.ycyw.service.ChatServiceImpl;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,12 +20,12 @@ import java.util.List;
 @RestController
 public class ApiController {
 
-    private final ChatService chatService;
+    private final ChatServiceImpl chatService;
 
     private final SimpUserRegistry userRegistry;
 
 
-    public ApiController(ChatService chatService, SimpUserRegistry simpUserRegistry) {
+    public ApiController(ChatServiceImpl chatService, SimpUserRegistry simpUserRegistry) {
         this.chatService = chatService;
         this.userRegistry = simpUserRegistry;
     }

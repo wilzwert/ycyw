@@ -17,7 +17,7 @@ import java.util.UUID;
 @Data
 @Accessors(chain = true)
 @Entity
-@Table(name="chat_conversations")
+@Table(name="chat_conversation")
 @EntityListeners({AuditingEntityListener.class})
 public class ChatConversation {
    @Id
