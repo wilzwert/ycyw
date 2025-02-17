@@ -2,6 +2,7 @@ package com.openclassrooms.ycyw.security.jwt;
 
 
 import com.openclassrooms.ycyw.model.JwtToken;
+import com.openclassrooms.ycyw.security.AuthenticationType;
 import com.openclassrooms.ycyw.security.service.CustomUserDetailsService;
 import com.openclassrooms.ycyw.security.service.JwtService;
 import io.jsonwebtoken.JwtException;
@@ -75,7 +76,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             if (username != null && authentication == null) {
                 UserDetails userDetails;
-                if(authType.equals("anonymous")) {
+                if(authType.equals(AuthenticationType.ANONYMOUS.toString())) {
                     userDetails = User.builder().roles("ANONYMOUS").username(username).password("").build();
                 }
                 else {

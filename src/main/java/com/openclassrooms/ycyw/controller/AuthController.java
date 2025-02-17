@@ -4,7 +4,7 @@ import com.openclassrooms.ycyw.security.AuthenticationType;
 import com.openclassrooms.ycyw.security.service.JwtService;
 import com.openclassrooms.ycyw.dto.request.LoginRequestDto;
 import com.openclassrooms.ycyw.dto.response.JwtResponse;
-import com.openclassrooms.ycyw.service.UserService;
+import com.openclassrooms.ycyw.service.UserServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -35,9 +35,9 @@ import java.util.stream.Collectors;
 
 public class AuthController {
     private final JwtService jwtService;
-    private final UserService userService;
+    private final UserServiceImpl userService;
 
-    public AuthController(JwtService jwtService,UserService userService) {
+    public AuthController(JwtService jwtService, UserServiceImpl userService) {
         this.jwtService = jwtService;
         this.userService = userService;
     }
@@ -61,7 +61,7 @@ public class AuthController {
             }
 
             // generated new token and return the response
-            role = authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).findFirst().orElse(null);
+            role = authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).findFirst().map(a -> a.replace("ROLE_", "")).orElse(null);
             String token = jwtService.generateToken(authentication.getName(), authorities.contains("ANONYMOUS") ? AuthenticationType.ANONYMOUS : AuthenticationType.USER);
             return new JwtResponse(token, "Bearer", authentication.getName(), role);
         }
@@ -71,7 +71,7 @@ public class AuthController {
         if(loginRequestDto != null) {
             authentication = this.userService.authenticateUser(loginRequestDto.getUsername(), loginRequestDto.getPassword());
             authType = AuthenticationType.USER;
-            role = authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).findFirst().orElse(null);
+            role = authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).findFirst().map(a -> a.replace("ROLE_", "")).orElse(null);
         }
         else {
             authentication = this.userService.authenticateAnonymously();

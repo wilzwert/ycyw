@@ -49,6 +49,6 @@ else {
     nav.appendChild(li);
 
     let login = document.createElement('li');
-    li.innerHTML = '<a href="/login" title="Login">Login</a>';
+    login.innerHTML = '<a href="/login" title="Login">Login</a>';
     nav.appendChild(login);
 }
