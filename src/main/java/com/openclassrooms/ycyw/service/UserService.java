@@ -1,6 +1,8 @@
 package com.openclassrooms.ycyw.service;
 
 
+import com.openclassrooms.ycyw.dto.controller.AuthenticationTokenDto;
+import com.openclassrooms.ycyw.dto.request.LoginRequestDto;
 import com.openclassrooms.ycyw.model.User;
 import org.springframework.security.core.Authentication;
 
@@ -15,6 +17,10 @@ import java.util.Optional;
 public interface UserService {
 
     Optional<User> findUserByUsername(final String username);
+
+    AuthenticationTokenDto login(Authentication authentication, final LoginRequestDto loginRequestDto);
+
+    AuthenticationTokenDto upgradeAuthentication(Authentication authentication, final LoginRequestDto loginRequestDto);
 
     Authentication authenticateUser(String username, String password) ;
 
