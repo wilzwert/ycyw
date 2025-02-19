@@ -1,26 +1,36 @@
-import {MESSAGE_TYPE, Chat, ChatHistory, ChatService} from './chat.js';
+"use strict";
+
+import {MESSAGE_TYPE, Chat, ChatHistory} from './chat.js';
 import { Client } from '@stomp/stompjs';
+import { TokenService } from './token.js';
 
 class UserChat {
 
     chatHistory = null;
     client = null;
-    socketSessionId = null;
+    username = null;
+    conversationId = null;
 
     constructor() {
     }
 
-    displayChat(username, chatHistoryEntry = null) {
+    displayChat(conversationId, username, chatHistoryEntry = null) {
         const chat = new Chat({
+            sender: this.username,
+            conversationId: conversationId,
             client: this.client,
             recipient: username,
-            source: `/user/queue/messages/${username}-user${this.socketSessionId}`,
+            source: `/user/queue/messages/${conversationId}`,
             destination: '/app/private',
-            chatHistory: this.chatHistory
+            chatHistory: this.chatHistory,
+            onClose: () => location.href = "/"
         });
 
         if(chatHistoryEntry) {
             chat.restoreFromHistory(chatHistoryEntry);
+        }
+        else {
+            this.chatHistory.createEntry(conversationId, username);
         }
         this.wrapper.innerHTML = '';
         this.wrapper.appendChild(chat.element);
@@ -35,29 +45,33 @@ class UserChat {
             return false;
         }
         let chatHistoryEntry = chatHistoryEntries[0];
-        this.displayChat(chatHistoryEntry.user, chatHistoryEntry);
+        this.displayChat(chatHistoryEntry.conversationId, chatHistoryEntry.distantUser, chatHistoryEntry);
     }
 
     async startChat() {
         this.wrapper.innerHTML = "You should soon be connected to one of our agents";
+        this.client.subscribe(`/user/queue/messages`, (message) => {
+            let messageObject = JSON.parse(message.body);
+            if(messageObject.type === MESSAGE_TYPE.HANDLE) {
+                this.conversationId = messageObject.conversationId;
+                this.displayChat(messageObject.conversationId, messageObject.sender);
+            }
+        });
+
         this.client.publish({
             destination: '/app/support',
-            body: JSON.stringify({ sender: "", recipient: 'support', type: MESSAGE_TYPE.START, content: ''})
+            body: JSON.stringify({ sender: this.username, recipient: 'support', type: MESSAGE_TYPE.START, content: ''})
         });
 
         window.addEventListener("beforeunload", () => {
+            console.log(this.client);
             this.client.publish({
                 destination: '/app/support',
-                body: JSON.stringify({ sender: "", recipient: 'support', type: MESSAGE_TYPE.QUIT, content: ''})
+                body: JSON.stringify({ sender: this.username, recipient: 'support', type: MESSAGE_TYPE.QUIT, content: '', conversationId: this.conversationId})
             });
         });
 
-        this.client.subscribe(`/user/queue/messages-user${this.socketSessionId}`, (message) => {
-            let messageObject = JSON.parse(message.body);
-            if(messageObject.type === MESSAGE_TYPE.HANDLE) {
-                this.displayChat(messageObject.sender);
-            }
-        });
+
     }
 
     async createChat() {
@@ -68,13 +82,16 @@ class UserChat {
     }
 
     async websocketConnected() {
-        let url = this.client.webSocket._transport.url;
-        this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)\/websocket/)[1];
-
-        // websocket connected means we now have a username
-        // so we pass it to the ChatHistory if needed
+        // let url = this.client.webSocket._transport.url;
+        // this.socketSessionId = url.match(/\/ws\/[^/]+\/([^/]+)\/websocket/)[1];
+        this.username = await TokenService.getUsername();
+        // pass current username to the ChatHistory if needed
         if(this.chatHistory.owner === null) {
-            this.chatHistory.owner = await ChatService.getUsername();
+            this.chatHistory.owner = this.username;
+        }
+        // changing current user implies that all chats have been closed one way or another
+        else if(this.chatHistory.owner !== this.username) {
+            this.chatHistory.clear();
         }
 
         await this.createChat();
@@ -85,20 +102,18 @@ class UserChat {
         // if the broker closed the connection, it may indicate a problem with the server
         // or that an authenticated user logged out
         // in that specific case, page should be reloaded to try to reload chat
-        location.reload();
+        // location.reload();
     }
 
 
     async connect() {
         try {
             this.chatHistory = await ChatHistory.get();
+            let token = await TokenService.getToken();
 
             this.client = new Client({
                 // debug: console.log,
-                // Typical usage with SockJS
-                webSocketFactory: function () {
-                    return new SockJS("http://localhost:8080/ws");
-                },
+                brokerURL: "ws://localhost:8080/ws?token="+token,
                 onConnect: () => this.websocketConnected(),
                 onWebSocketClose: () => this.websocketClosed()
             });

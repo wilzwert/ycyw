@@ -1,13 +1,9 @@
 package com.openclassrooms.ycyw.configuration;
 
-
-import com.openclassrooms.ycyw.service.ChatService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
-import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
-import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
-import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
+import org.springframework.web.socket.config.annotation.*;
 
 /**
  * @author Wilhelm Zwertvaegher
@@ -16,19 +12,15 @@ import org.springframework.web.socket.server.support.HttpSessionHandshakeInterce
  */
 
 @Configuration
+@EnableWebSocket
 @EnableWebSocketMessageBroker
-public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer
+@Slf4j
+public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer//, WebSocketConfigurer
 {
-
-    private final ChatService chatService;
-
-    public WebSocketConfiguration(ChatService chatService) {
-        this.chatService = chatService;
-    }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic", "/user/queue/messages");
+        config.enableSimpleBroker("/topic", "/queue");
         config.setApplicationDestinationPrefixes("/app");
         config.setUserDestinationPrefix("/user");
     }
@@ -36,8 +28,8 @@ public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setHandshakeHandler(new CustomHandshakeHandler(chatService))
-                // .addInterceptors(new CustomHttpSessionHandshakeInterceptor())
-                .withSockJS();
+                .setHandshakeHandler(new CustomHandshakeHandler())
+                .setAllowedOrigins("*") // no CORS for this POC
+                ;
     }
 }

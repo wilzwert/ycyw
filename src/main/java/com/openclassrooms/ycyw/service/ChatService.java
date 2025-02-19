@@ -1,89 +1,51 @@
 package com.openclassrooms.ycyw.service;
 
 
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Service;
+import com.openclassrooms.ycyw.dto.ChatMessageDto;
+import com.openclassrooms.ycyw.dto.ChatUserDto;
+import com.openclassrooms.ycyw.model.ChatMessageType;
+import com.openclassrooms.ycyw.service.message.MessageReceiver;
 
-import java.util.*;
+import java.security.Principal;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * @author Wilhelm Zwertvaegher
- * Date:10/02/2025
- * Time:12:41
+ * Date:17/02/2025
+ * Time:21:10
  */
-
-@Service
-public class ChatService {
-    // map http session ids to generated usernames
-    private final HashMap<String, String> usernames = new HashMap<>();
-    // store waiting usernames to allow retrieval
-    private final HashSet<String> waitingUsers = new HashSet<>();
-
-    /**
-     * Returns the username associated with the http session
-     * @param httpSessionId the http session identifier
-     * @return an optional with the username if present
-     */
-    public Optional<String> getSessionUsername(String httpSessionId) {
-        // use actual user authentication if available
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof UserDetails) {
-            return Optional.of(auth.getName());
-        }
-
-        String username = usernames.get(httpSessionId);
-        if (username != null) {
-            return Optional.of(username);
-        }
-        return Optional.empty();
-    }
-
-    /**
-     *
-     * @param httpSessionId the http session id
-     * @return a generated username or an existent one if http session id already has one
-     */
-    public String getGeneratedUsername(String httpSessionId) {
-        if(usernames.containsKey(httpSessionId)) {
-            return usernames.get(httpSessionId);
-        }
-
-        // generate anonymous user and prevent collision with existing users
-        int c = this.usernames.size()+1;
-        String username;
-        do {
-            c++;
-            username = "user"+c;
-        }
-        while (this.usernames.containsKey(username));
-
-        this.usernames.put(httpSessionId, username);
-        return username;
-    }
+public interface ChatService {
 
     /**
      * Adds a username to the list of users waiting to be handled by support
-     * @param username the username of the chat user
+     * @param user the chat user
      */
-    public void addWaitingUser(String username) {
-        waitingUsers.add(username);
-    }
+    void addWaitingUser(ChatUserDto user);
 
     /**
      * Removes a username to the list of users waiting to be handled by support
-     * @param username the username of the chat user
+     * @param conversationId the id of the conversation
      */
-    public void removeWaitingUser(String username) {
-        waitingUsers.remove(username);
-    }
+    void removeWaitingUser(UUID conversationId);
+
+    Optional<ChatUserDto> getWaitingUser(String username);
 
     /**
      *
-     * @return the set of users waiting to be handled by support
+     * @return the map of users waiting to be handled by support
      */
-    public Set<String> getWaitingUsers() {
-        return waitingUsers;
-    }
+    Map<UUID, ChatUserDto> getWaitingUsers();
+
+
+    void registerSupportMessageReceiver(List<ChatMessageType> types, MessageReceiver supportMessageReceiver);
+
+    void registerPrivateMessageReceiver(List<ChatMessageType> types, MessageReceiver supportMessageReceiver);
+
+    void receiveSupportMessage(ChatMessageDto message, Principal principal);
+
+    void receivePrivateMessage(ChatMessageDto message, Principal principal);
+
 }

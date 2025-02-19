@@ -1,3 +1,50 @@
+body {
+    font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #eee;
+    padding: 40px 0;
+    margin: 0;
+    line-height: 1.5;
+    font-size: 16px;
+}
+
+h2 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 2rem;
+    font-weight: 500;
+    line-height: 2rem;
+}
+
+a,
+a:visited {
+    text-decoration: none;
+    color: #06f;
+}
+
+a:hover {
+    text-decoration: underline;
+    color: #003c97;
+}
+
+input[type="text"],
+input[type="password"] {
+    height: auto;
+    width: 100%;
+    font-size: 1rem;
+    padding: 0.5rem;
+    box-sizing: border-box;
+}
+
+button {
+    padding: 0.5rem 1rem;
+    font-size: 1.25rem;
+    line-height: 1.5;
+    border: none;
+    border-radius: 0.1rem;
+    width: 100%;
+    cursor: pointer;
+}
+
 .main-nav {
     position: fixed;
     height: 40px;
@@ -24,11 +71,24 @@ nav ul {
     padding: 0;
 }
 
+
 .wrapper {
-    width: 80%;
-    max-width: 800px;
-    margin: auto;
+    margin-right: auto;
+    margin-left: auto;
+    padding-right: 1rem;
+    padding-left: 1rem;
+    width: 100%;
+    box-sizing: border-box;
 }
+
+@media (min-width: 960px) {
+    .wrapper {
+        max-width: 800px;
+        padding-left: 0;
+        padding-right: 0;
+    }
+}
+
 
 img {
     display: block;
@@ -74,6 +134,7 @@ img {
     text-align: center;
     background: #aaaaaa;
     margin-bottom: .5em;
+    position: relative;
 }
 
 .user.active {
@@ -97,6 +158,10 @@ img {
     display: inline-block;
     vertical-align: middle;
     line-height: 1.5em;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%) translateX(50%);
 }
 
 .chats {
@@ -109,11 +174,12 @@ img {
     display: flex;
     flex-direction: column;
     border: 1px solid #999;
+    position: relative;
 }
 .messages {
     flex: 1 0;
     overflow: auto;
-    padding: 1em;
+    padding: 1.25em 1em;
     position: relative;
 }
 
@@ -177,4 +243,14 @@ input[type="text"],input[type="password"], button {
     float: right;
     font-style: italic;
     font-size: 0.8rem;
+    transform: translateY(100%);
+}
+
+.chat-close {
+    display: inline-block;
+    position: absolute;
+    top: 0;
+    right: 1.5em;
+    font-size: .75rem;
+    cursor: pointer;
 }
