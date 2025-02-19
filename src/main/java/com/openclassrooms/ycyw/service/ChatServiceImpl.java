@@ -72,7 +72,6 @@ public class ChatServiceImpl implements ChatService {
         if(receiver == null) {
             throw new UnsupportedMessageTypeException("Unsupported message type"+message.type());
         }
-        System.out.println("RECEIVE MESSAGE RECEIVER TYPE "+message.type()+", receiver "+receiver.getClass().getName());
         receiver.receiveMessage(message, principal);
     }
 
@@ -86,7 +85,6 @@ public class ChatServiceImpl implements ChatService {
         if(receiver == null) {
             throw new UnsupportedMessageTypeException("Unsupported message type"+message.type());
         }
-        System.out.println("RECEIVE MESSAGE RECEIVER TYPE "+message.type()+", receiver "+receiver.getClass().getName());
         receiver.receiveMessage(message, principal);
     }
 }

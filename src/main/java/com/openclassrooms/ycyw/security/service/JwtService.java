@@ -59,9 +59,7 @@ public class JwtService {
         try {
             Jwt<?, ?> parsedToken = Jwts
                     .parser().verifyWith(getSignInKey()).build().parse(token);
-            System.out.println(parsedToken.getPayload());
             Claims claims = (Claims) parsedToken.getPayload();
-            System.out.println(claims);
             JwtToken jwtToken = new JwtToken(claims.getSubject(), claims);
             return Optional.of(jwtToken);
         }

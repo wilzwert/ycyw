@@ -44,22 +44,25 @@ public class StartMessageSupportReceiver implements SupportMessageReceiver {
         // in that case we reuse the previously created conversation
         Optional<ChatUserDto> userDtoOptional = this.chatService.getWaitingUser(principal.getName());
         if(userDtoOptional.isEmpty()) {
+
             Optional<User> foundUser = this.userService.findUserByUsername(principal.getName());
             ChatConversation chatConversation = new ChatConversation()
                     .setInitiatorUsername(principal.getName())
                     .setInitiator(foundUser.orElse(null))
                     ;
-            userDtoOptional = Optional.of(new ChatUserDto(principal.getName(), this.chatConversationService.createConversation(chatConversation).getId()));
+            ChatUserDto userDto = new ChatUserDto(principal.getName(), this.chatConversationService.createConversation(chatConversation).getId());
+
+            // set user in waiting users list
+            chatService.addWaitingUser(userDto);
+
+            // broadcast start message to support
+            ChatMessageDto result = new ChatMessageDto(principal.getName(), message.recipient(), ChatMessageType.START, "", userDto.conversationId());
+            simpMessagingTemplate.convertAndSend("/topic/support", result);
+
+            // send conversationId to initiator user
+            ChatMessageDto senderResult = new ChatMessageDto(principal.getName(), principal.getName(), ChatMessageType.START, "", userDto.conversationId());
+            simpMessagingTemplate.convertAndSendToUser(principal.getName(), "/queue/messages", senderResult);
         }
-
-        ChatUserDto userDto = userDtoOptional.get();
-
-        // set user in waiting users list
-        chatService.addWaitingUser(userDto);
-
-        // broadcast start message to support
-        ChatMessageDto result = new ChatMessageDto(principal.getName(), message.recipient(), ChatMessageType.START, "", userDto.conversationId());
-        simpMessagingTemplate.convertAndSend("/topic/support", result);
     }
 
     @Override

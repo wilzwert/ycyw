@@ -27,7 +27,6 @@ public class CloseMessagePrivateReceiver extends DefaultMessagePrivateReceiver {
         this.chatConversationService = chatConversationService;
     }
 
-
     @Override
     public void receiveMessage(ChatMessageDto message, Principal principal) {
         // end the conversation

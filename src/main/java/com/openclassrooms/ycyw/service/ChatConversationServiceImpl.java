@@ -35,7 +35,6 @@ public class ChatConversationServiceImpl implements ChatConversationService {
 
     @Override
     public void closeConversation(ChatConversation chatConversation) {
-        System.out.println("CLOSING CONVERSATION");
         chatConversation.setEndedAt(LocalDateTime.now());
         this.chatConversationRepository.save(chatConversation);
     }
