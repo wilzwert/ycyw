@@ -182,13 +182,13 @@ class ChatUI {
         this.#typingMessage = document.createElement('div');
         this.#typingMessage.className = 'display-typing';
         this.#typingMessage.innerHTML = 'User is typing...';
-        this.#messagesContainer.appendChild(this.#typingMessage);
+        this.#wrapper.appendChild(this.#typingMessage);
 
         // create container to display "User is typing..." when needed
         this.#closeLink = document.createElement('a');
         this.#closeLink.className = 'chat-close';
         this.#closeLink.innerHTML = 'End chat';
-        this.#messagesContainer.appendChild(this.#closeLink);
+        this.#wrapper.appendChild(this.#closeLink);
 
         // add listeners for form events
         this.createListeners();

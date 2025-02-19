@@ -132,7 +132,7 @@ class SupportChat {
 
         this.#client.subscribe(
             // `/user/queue/messages/${username}-user${this.socketSessionId}`,
-            `/user/queue/messages/${username}`,
+            `/user/queue/messages/${conversationId}`,
             this.handleUserMessage.bind(this)
         )
     }
@@ -152,6 +152,7 @@ class SupportChat {
         });
         // display chat for the user
         this.createChat(conversationId, username);
+        this.removeWaitingUser({conversationId: conversationId, username: username});
     }
 
     // display new waiting user
@@ -163,11 +164,20 @@ class SupportChat {
     }
 
     // remove user from waiting users list
-    removeWaitingUser(conversationId) {
-        if(typeof this.#waitingUsers[conversationId] != "undefined") {
-            let element = this.#waitingUsers[conversationId].element;
-            element.parentNode.removeChild(element);
-            delete this.#waitingUsers[conversationId];
+    removeWaitingUser(messageObject) {
+        if(messageObject.conversationId != null) {
+            if (typeof this.#waitingUsers[messageObject.conversationId] != "undefined") {
+                let element = this.#waitingUsers[messageObject.conversationId].element;
+                element.parentNode.removeChild(element);
+                delete this.#waitingUsers[messageObject.conversationId];
+            }
+        }
+        else if(messageObject.sender != null) {
+            let u = Object.values(this.#waitingUsers).find(v => v.username === messageObject.sender);
+            if(u && u.element) {
+                u.element.parentNode.removeChild(u.element);
+            }
+            delete this.#waitingUsers[u.conversationId];
         }
     }
 
@@ -182,7 +192,7 @@ class SupportChat {
                 break;
             // a user has quit before they have been handled by someone from support
             case MESSAGE_TYPE.QUIT :
-                this.removeWaitingUser(messageObject.conversationId)
+                this.removeWaitingUser(messageObject)
                 break;
             // a waiting user is handled by a support agent
             case MESSAGE_TYPE.HANDLE :
@@ -196,6 +206,7 @@ class SupportChat {
     handleUserMessage(message) {
         const messageObject = JSON.parse(message.body);
 
+        console.log(`got message from conversation ${messageObject.conversationId} `);
         if(messageObject.type === MESSAGE_TYPE.MESSAGE && messageObject.conversationId !== this.#currentChat) {
             console.log('message from other conversation');
             let user = this.#handledContainer.childNodes.values().find(u => u.getAttribute('data-conversation-id') === messageObject.conversationId);
@@ -282,11 +293,15 @@ class SupportChat {
         // if the broker closed the connection, it may indicate a problem with the server
         // or that an authenticated user logged out
         // in that specific case, page should be reloaded to try to reload chat
-        location.reload();
+        // location.reload();
     }
 
     async start() {
         try {
+            let role = await TokenService.getRole();
+            if(role !== "SUPPORT") {
+                location.href = "/login";
+            }
             this.chatHistory = await ChatHistory.get();
             let token = await TokenService.getToken();
             console.log("Token "+token);
