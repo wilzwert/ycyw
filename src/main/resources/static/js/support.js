@@ -137,7 +137,7 @@ class SupportChat {
         )
     }
 
-    // support user wants to handle chat with username
+    // support user wants to handle chat with username for conversationId
     handleUser(conversationId, username) {
         // broadcast the handle message
         this.#client.publish({
@@ -152,7 +152,7 @@ class SupportChat {
         });
         // display chat for the user
         this.createChat(conversationId, username);
-        this.removeWaitingUser({conversationId: conversationId, username: username});
+        this.removeWaitingUser(conversationId,username);
     }
 
     // display new waiting user
@@ -164,16 +164,17 @@ class SupportChat {
     }
 
     // remove user from waiting users list
-    removeWaitingUser(messageObject) {
-        if(messageObject.conversationId != null) {
-            if (typeof this.#waitingUsers[messageObject.conversationId] != "undefined") {
-                let element = this.#waitingUsers[messageObject.conversationId].element;
+    removeWaitingUser(conversationId, username) {
+        console.log(`removeWaitingUser ${conversationId} ${username}`);
+        if(conversationId != null) {
+            if (typeof this.#waitingUsers[conversationId] != "undefined") {
+                let element = this.#waitingUsers[conversationId].element;
                 element.parentNode.removeChild(element);
-                delete this.#waitingUsers[messageObject.conversationId];
+                delete this.#waitingUsers[conversationId];
             }
         }
-        else if(messageObject.sender != null) {
-            let u = Object.values(this.#waitingUsers).find(v => v.username === messageObject.sender);
+        else if(username != null) {
+            let u = Object.values(this.#waitingUsers).find(v => v.username === username);
             if(u && u.element) {
                 u.element.parentNode.removeChild(u.element);
             }
@@ -184,7 +185,7 @@ class SupportChat {
     // handle message broadcast on /topic/support
     handleMessage(message) {
         const messageObject = JSON.parse(message.body);
-
+        console.log('received', messageObject);
         switch(messageObject.type) {
             // new user has arrived and waits to be handled by someone from support
             case MESSAGE_TYPE.START :
@@ -192,11 +193,12 @@ class SupportChat {
                 break;
             // a user has quit before they have been handled by someone from support
             case MESSAGE_TYPE.QUIT :
-                this.removeWaitingUser(messageObject)
+                this.removeWaitingUser(messageObject.conversationId, messageObject.sender)
                 break;
             // a waiting user is handled by a support agent
             case MESSAGE_TYPE.HANDLE :
-                this.removeWaitingUser(messageObject.conversationId);
+                console.log('Message was of HANDLE type, we should remove waiting user');
+                this.removeWaitingUser(messageObject.conversationId, messageObject.sender);
                 break;
             default: break;
         }
