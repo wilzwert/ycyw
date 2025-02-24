@@ -117,7 +117,7 @@ class SupportChat {
             source: `/user/queue/messages/${conversationId}`,
             destination: "/app/private",
             chatHistory: this.chatHistory,
-            onPingTimeout: this.removeChat.bind(this)
+            onPingTimeout: (chat) => {alert(`User is unreachable ; history will be removed.`); this.removeChat(chat);}
         });
         if(chatHistoryEntry) {
             this.#chats[conversationId].restoreFromHistory(chatHistoryEntry);
@@ -165,7 +165,6 @@ class SupportChat {
 
     // remove user from waiting users list
     removeWaitingUser(conversationId, username) {
-        console.log(`removeWaitingUser ${conversationId} ${username}`);
         if(conversationId != null) {
             if (typeof this.#waitingUsers[conversationId] != "undefined") {
                 let element = this.#waitingUsers[conversationId].element;
@@ -185,7 +184,6 @@ class SupportChat {
     // handle message broadcast on /topic/support
     handleMessage(message) {
         const messageObject = JSON.parse(message.body);
-        console.log('received', messageObject);
         switch(messageObject.type) {
             // new user has arrived and waits to be handled by someone from support
             case MESSAGE_TYPE.START :
@@ -197,7 +195,6 @@ class SupportChat {
                 break;
             // a waiting user is handled by a support agent
             case MESSAGE_TYPE.HANDLE :
-                console.log('Message was of HANDLE type, we should remove waiting user');
                 this.removeWaitingUser(messageObject.conversationId, messageObject.sender);
                 break;
             default: break;
@@ -208,9 +205,7 @@ class SupportChat {
     handleUserMessage(message) {
         const messageObject = JSON.parse(message.body);
 
-        console.log(`got message from conversation ${messageObject.conversationId} `);
         if(messageObject.type === MESSAGE_TYPE.MESSAGE && messageObject.conversationId !== this.#currentChat) {
-            console.log('message from other conversation');
             let user = this.#handledContainer.childNodes.values().find(u => u.getAttribute('data-conversation-id') === messageObject.conversationId);
             let count = user.childNodes[1].innerHTML === '' ? 0 : parseInt(user.childNodes[1].innerHTML);
             count++;
@@ -222,7 +217,7 @@ class SupportChat {
     async restoreFromHistory() {
 
         let chatHistoryEntries = this.chatHistory.entries;
-        console.log(chatHistoryEntries);
+
         // no entries mean there is nothing we can restore
         if(chatHistoryEntries == null || !Array.isArray(chatHistoryEntries)) {
             return false;
@@ -239,7 +234,6 @@ class SupportChat {
     restoreWaitingUsers() {
         fetch("/api/chat/users?filter=waiting").then(r => r.json().then(json => {
            if(Array.isArray(json)) {
-               console.log(json);
                json.forEach(u => this.addWaitingUser(u.conversationId, u.username));
            }
         }));
@@ -306,13 +300,12 @@ class SupportChat {
             }
             this.chatHistory = await ChatHistory.get();
             let token = await TokenService.getToken();
-            console.log("Token "+token);
             this.#client = new Client({
                 brokerURL: "ws://localhost:8080/ws?token="+token,
                 // debug: console.log,
                 onConnect: this.websocketConnected.bind(this),
                 onWebSocketClose: this.websocketClosed.bind(this)
-            }, console.log);
+            });
             this.#client.activate();
         }
         catch(ex) {

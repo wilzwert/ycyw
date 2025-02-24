@@ -71,7 +71,6 @@ export class ChatHistory {
 
     removeConversation(conversationId) {
         if(this.#entries) {
-            console.log(`removing ${conversationId}`);
             let index = this.#entries.findIndex(e => e.conversationId === conversationId);
             if(index >= 0) {
                 this.#entries.splice(index, 1);
@@ -81,7 +80,6 @@ export class ChatHistory {
     }
 
     clear() {
-        console.trace('shouldClear chatHistory');
         localStorage.removeItem("chatHistory");
         this.#entries = null;
         this.#owner = null;
@@ -386,7 +384,6 @@ export class Chat {
         // nothing happened
         if(delay > Chat.TIMEOUT) {
             this.userInactive();
-            // OLD this.#chatHistory.removeDistantUser(this.#recipient);
             this.#chatHistory.removeConversation(this.#conversationId);
             // if specific callback provided we call it
             if(this.#onPingTimeout) {
@@ -394,7 +391,7 @@ export class Chat {
             }
             // otherwise it defaults to only reloading the page
             else {
-                // setTimeout(() => location.reload(), 2000);
+                setTimeout(() => location.reload(), 2000);
             }
         }
         // otherwise we juste ping again
@@ -434,9 +431,7 @@ export class Chat {
 
     // restore messages from history
     restoreFromHistory(chatHistoryEntry) {
-        console.trace(chatHistoryEntry.messages);
         chatHistoryEntry.messages.forEach(messageObject => {
-            console.log(messageObject);
             if(messageObject.sender === this.#sender) {
                 this.#ui.addSentMessage(messageObject.content);
             }
@@ -514,7 +509,6 @@ export class Chat {
     // send a message
     sendMessage(messageType, content) {
         const messageObject = { sender: this.#sender, recipient: this.#recipient, type: messageType, content: content, conversationId: this.#conversationId};
-        console.log(messageObject);
         this.#client.publish({
             destination: this.#destination,
             body: JSON.stringify(messageObject)
