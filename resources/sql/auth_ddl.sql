@@ -1,0 +1,15 @@
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    status VARCHAR(50)NOT NULL
+);
+
+CREATE TABLE token (
+    id SERIAL PRIMARY KEY,
+    token_string VARCHAR(512) UNIQUE NOT NULL,
+    expiration TIMESTAMP NOT NULL,
+    user_id UUID NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

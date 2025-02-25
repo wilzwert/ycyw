@@ -1,0 +1,20 @@
+@startuml Payment service
+
+' Entities
+class Payment {
+  -id: UUID {id}
+  -bookingId: UUID
+  -amount: Decimal
+  -createdAt: DateTime
+  -updatedAt: DateTime
+  -status:PaymentStatus
+  +processPayment()
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+@enduml

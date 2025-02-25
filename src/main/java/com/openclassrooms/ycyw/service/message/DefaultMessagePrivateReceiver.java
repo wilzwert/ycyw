@@ -38,8 +38,7 @@ public class DefaultMessagePrivateReceiver implements PrivateMessageReceiver {
                 ChatMessageType.QUIT,
                 ChatMessageType.JOIN,
                 ChatMessageType.PING,
-                ChatMessageType.PING_RESPONSE,
-                ChatMessageType.TIMEOUT
+                ChatMessageType.PING_RESPONSE
         );
     }
 }

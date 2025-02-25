@@ -1,0 +1,30 @@
+@startuml Booking service
+
+' Entities
+class Booking {
+  -id: UUID {id}
+  -userId: UUID
+  +vehicleCategoryId: UUID
+  -vehicleCategoryName: String
+  +preferredVehicleId: UUID
+  -createdAt: DateTime
+  -updatedAt: DateTime
+  -startAt: DateTime
+  -endAt: DateTime
+  -startAgencyId: UUID
+  -endAgencyId: UUID
+  -totalAmount: Decimal
+  -status:BookingStatus
+  +calculateTotalAmount()
+}
+
+enum BookingStatus {
+  CREATED
+  VALIDATED
+  PAID
+  CONFIRMED
+  CANCELLED
+  FINALIZED
+}
+
+@enduml

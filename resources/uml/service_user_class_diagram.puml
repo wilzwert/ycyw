@@ -1,0 +1,32 @@
+@startuml User service
+
+' Entities
+class Address {
+  -id: Long {id}
+  -street: String
+  -city: String
+  -zipCode: String
+  -country: String
+}
+
+class User {
+  -id: UUID {id}
+  -email: String {unique}
+  -password: String
+  -firstName: String
+  -lastName: String
+  -status:UserStatus
+  -role:String
+  +getUserDetails()
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLACKLISTED
+}
+
+' Relationships
+User "1" -- "1" Address : has
+
+@enduml

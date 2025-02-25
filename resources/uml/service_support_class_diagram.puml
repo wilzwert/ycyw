@@ -1,0 +1,55 @@
+@startuml Support service
+
+' Entities
+class User {
+  -id: UUID {id}
+  -email: String {unique}
+  -password: String
+  -role:String
+}
+
+class FormMessage {
+  -id: UUID {id}
+  +supportUser: User
+  -senderEmail: String
+  -senderName: String
+  -content: String
+  -sentAt: DateTime
+  -repliedAt: DateTime
+}
+
+class ChatConversation {
+  -id: UUID {id}
+  +initiator: User
+  -initiatorUsername:String
+  -startedAt: DateTime
+  -endedAt: DateTime
+  +handler: User
+  -messages: List<ChatMessage>
+}
+
+class ChatMessage {
+  -id: Long {id}
+  -sender: String
+  -recipient: String
+  -sentAt: DateTime
+  -content: String
+}
+
+class Token {
+  -id: Long {id}
+  -userId UUID
+  -tokenString: String {unique}
+  -expiration: DateTime
+}
+
+' Relationships
+ChatConversation "1" -- "*" ChatMessage : has
+ChatConversation "*" -- "0" User : is initiated by
+ChatConversation "*" -- "0" User : is handled by
+
+FormMessage "*" -- "0" User : is handled by
+
+User "0" -- "*" Token: has
+
+@enduml

@@ -16,6 +16,5 @@ public enum ChatMessageType {
     JOIN,
     PING,
     PING_RESPONSE,
-    TIMEOUT,
     CLOSE
 }

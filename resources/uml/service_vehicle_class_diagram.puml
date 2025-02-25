@@ -1,0 +1,69 @@
+@startuml Support service
+
+' Entities
+class Address {
+  -id: Long {id}
+  -street: String
+  -city: String
+  -zipCode: String
+  -country: String
+}
+
+class Vehicle {
+  -id: UUID {id}
+  -name: String
+  -description: String
+  -category: Category
+  -status:VehicleStatus
+  -owningAgency: Agency
+  -currentAgency: Agency
+  -history: List<VehicleHistory>
+}
+
+class Category {
+  -id: UUID {id}
+  -name: String
+  -price: Decimal
+  -description: String
+  -recommendedPersons: int
+  -images: List<String>
+  -parentCategory: Category
+}
+
+class VehicleHistory {
+  -id: Long {id}
+  -vehicle:Vehicle
+  -startedAt: DateTime
+  -endedAt: DateTime
+  -startAgency: Agency
+  -endAgency: Agency
+}
+
+class Agency {
+  -id: UUID {id}
+  -name: String
+  -address: Address
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  UNAVAILABLE
+  BROKEN
+}
+
+' Relationships
+Agency "1" -- "1" Address : has
+Agency "1" -- "*" Vehicle : owns
+
+Vehicle "*" -- "1" Category : belongs to
+Vehicle "*" -- "1" Agency : is located in
+Vehicle "1" -- "*" VehicleHistory : has
+
+VehicleHistory "1" -- "*" Agency : startedAt
+VehicleHistory "0" -- "*" Agency : endedAt
+
+
+
+Category "1" -- "*" Category : has subcategories
+
+@enduml

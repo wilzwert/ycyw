@@ -1,0 +1,27 @@
+@startuml Auth service
+' Entities
+class User {
+  -id: UUID {id}
+  -email: String {unique}
+  -password: String
+  -role:String
+  -status:UserStatus
+}
+
+class Token {
+  -id: Long {id}
+  -tokenString: String {unique}
+  -expiration: DateTime
+  -user: User
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLACKLISTED
+}
+
+' Relationships
+User "1" -- "*" Token : has
+
+@enduml
