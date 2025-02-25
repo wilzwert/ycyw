@@ -1,6 +1,6 @@
 document.getElementById('formLogin').addEventListener('submit', (e) => {
 e.preventDefault();
-console.log(e.target);
+
 fetch(
     "/api/auth/login",
     {
